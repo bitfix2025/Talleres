@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -219,6 +220,7 @@ export default function ChecklistPage() {
   const router = useRouter();
 
   const ordenId = String(params.id);
+  const ordenIdNumero = Number(ordenId);
 
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
   const [accesorios, setAccesorios] = useState<string[]>([]);
@@ -261,6 +263,14 @@ export default function ChecklistPage() {
       setCargando(true);
       setMensaje("");
 
+      if (
+        !ordenIdNumero ||
+        Number.isNaN(ordenIdNumero)
+      ) {
+        setMensaje("ID de orden inválido.");
+        return;
+      }
+
       const {
         data: orden,
         error: errorOrden,
@@ -271,7 +281,7 @@ export default function ChecklistPage() {
         )
         .eq(
           "id",
-          Number(ordenId)
+          ordenIdNumero
         )
         .maybeSingle();
 
@@ -319,7 +329,7 @@ export default function ChecklistPage() {
         )
         .eq(
           "orden_id",
-          Number(ordenId)
+          ordenIdNumero
         )
         .eq(
           "momento",
@@ -352,7 +362,10 @@ export default function ChecklistPage() {
       setAccesorios([]);
       setObservaciones("");
 
-      if (!data || data.length === 0) {
+      if (
+        !data ||
+        data.length === 0
+      ) {
         return;
       }
 
@@ -366,9 +379,16 @@ export default function ChecklistPage() {
       const accesoriosEncontrados: string[] = [];
 
       data.forEach((fila: any) => {
+        /*
+         * Los accesorios se identifican por la categoría.
+         *
+         * IMPORTANTE:
+         * Ya no comprobamos estado === "RECIBIDO"
+         * porque RECIBIDO no está permitido por el
+         * CHECK CONSTRAINT de Supabase.
+         */
         if (
-          fila.categoria === "Accesorios" &&
-          fila.estado === "RECIBIDO"
+          fila.categoria === "Accesorios"
         ) {
           if (
             ACCESORIOS.includes(
@@ -396,7 +416,8 @@ export default function ChecklistPage() {
 
         const item = ITEMS.find(
           (item) =>
-            item.prueba === fila.prueba
+            item.prueba ===
+            fila.prueba
         );
 
         if (item) {
@@ -469,6 +490,16 @@ export default function ChecklistPage() {
       setGuardando(true);
       setMensaje("");
 
+      if (
+        !ordenIdNumero ||
+        Number.isNaN(ordenIdNumero)
+      ) {
+        setMensaje(
+          "ID de orden inválido."
+        );
+        return;
+      }
+
       const seleccionados =
         ITEMS.filter(
           (item) =>
@@ -498,10 +529,12 @@ export default function ChecklistPage() {
         error: errorOrdenSeguridad,
       } = await supabase
         .from("ordenes_reparacion")
-        .select("checklist_completado")
+        .select(
+          "checklist_completado"
+        )
         .eq(
           "id",
-          Number(ordenId)
+          ordenIdNumero
         )
         .maybeSingle();
 
@@ -544,11 +577,13 @@ export default function ChecklistPage() {
       const {
         error: errorDelete,
       } = await supabase
-        .from("checklist_reparacion")
+        .from(
+          "checklist_reparacion"
+        )
         .delete()
         .eq(
           "orden_id",
-          Number(ordenId)
+          ordenIdNumero
         )
         .eq(
           "momento",
@@ -597,7 +632,7 @@ export default function ChecklistPage() {
 
             return {
               orden_id:
-                Number(ordenId),
+                ordenIdNumero,
 
               momento:
                 "ENTRADA",
@@ -627,13 +662,22 @@ export default function ChecklistPage() {
        * PASO 3
        * CREAR FILAS DE ACCESORIOS
        * ==================================================
+       *
+       * IMPORTANTE:
+       *
+       * "RECIBIDO" NO está permitido por el CHECK
+       * CONSTRAINT de Supabase.
+       *
+       * Por eso guardamos "FUNCIONA", que sí está
+       * permitido, y usamos categoria = "Accesorios"
+       * para saber que la fila corresponde a un accesorio.
        */
 
       const filasAccesorios =
         accesorios.map(
           (accesorio, index) => ({
             orden_id:
-              Number(ordenId),
+              ordenIdNumero,
 
             momento:
               "ENTRADA",
@@ -645,7 +689,7 @@ export default function ChecklistPage() {
               accesorio,
 
             estado:
-              "RECIBIDO",
+              "FUNCIONA",
 
             observacion:
               observaciones.trim() ||
@@ -663,13 +707,19 @@ export default function ChecklistPage() {
         ...filasAccesorios,
       ];
 
+      console.log(
+        "FILAS CHECKLIST A INSERTAR:",
+        JSON.stringify(
+          filasFinales,
+          null,
+          2
+        )
+      );
+
       /*
        * ==================================================
        * PASO 4
        * INSERTAR CHECKLIST
-       *
-       * Se utiliza .select() para confirmar qué filas
-       * fueron realmente insertadas.
        * ==================================================
        */
 
@@ -677,8 +727,12 @@ export default function ChecklistPage() {
         data: datosInsertados,
         error: errorInsert,
       } = await supabase
-        .from("checklist_reparacion")
-        .insert(filasFinales)
+        .from(
+          "checklist_reparacion"
+        )
+        .insert(
+          filasFinales
+        )
         .select();
 
       if (errorInsert) {
@@ -732,7 +786,9 @@ export default function ChecklistPage() {
         data: ordenActualizada,
         error: errorCerrar,
       } = await supabase
-        .from("ordenes_reparacion")
+        .from(
+          "ordenes_reparacion"
+        )
         .update({
           checklist_completado:
             true,
@@ -742,7 +798,7 @@ export default function ChecklistPage() {
         })
         .eq(
           "id",
-          Number(ordenId)
+          ordenIdNumero
         )
         .eq(
           "checklist_completado",
@@ -783,7 +839,9 @@ export default function ChecklistPage() {
        * ==================================================
        */
 
-      if (!ordenActualizada) {
+      if (
+        !ordenActualizada
+      ) {
         const {
           data: ordenVerificada,
           error: errorVerificacion,
@@ -796,7 +854,7 @@ export default function ChecklistPage() {
           )
           .eq(
             "id",
-            Number(ordenId)
+            ordenIdNumero
           )
           .maybeSingle();
 
@@ -849,6 +907,7 @@ export default function ChecklistPage() {
       );
 
       await cargarChecklist();
+
     } catch (error: any) {
       console.error(
         "ERROR GUARDANDO CHECKLIST:",
@@ -861,6 +920,7 @@ export default function ChecklistPage() {
           "Error desconocido"
         }`
       );
+
     } finally {
       setGuardando(false);
     }
