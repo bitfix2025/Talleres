@@ -17,6 +17,12 @@ type ItemChecklist = {
   opciones: Opcion[];
 };
 
+type FotoRecepcion = {
+  id: number;
+  tipo: string;
+  url: string;
+};
+
 const ITEMS: ItemChecklist[] = [
   {
     id: "pantalla",
@@ -215,6 +221,22 @@ const ACCESORIOS = [
   "Caja",
 ];
 
+const TIPOS_FOTO = [
+  { id: "frente", nombre: "Frente", icono: "📱" },
+  { id: "trasera", nombre: "Trasera", icono: "🔄" },
+  {
+    id: "lateral_izquierdo",
+    nombre: "Lateral izquierdo",
+    icono: "↔️",
+  },
+  {
+    id: "lateral_derecho",
+    nombre: "Lateral derecho",
+    icono: "↔️",
+  },
+  { id: "danos", nombre: "Daños", icono: "⚠️" },
+];
+
 export default function ChecklistPage() {
   const params = useParams();
   const router = useRouter();
@@ -225,6 +247,7 @@ export default function ChecklistPage() {
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
   const [accesorios, setAccesorios] = useState<string[]>([]);
   const [observaciones, setObservaciones] = useState("");
+  const [fotosGuardadas, setFotosGuardadas] = useState<FotoRecepcion[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState("");
@@ -256,6 +279,43 @@ export default function ChecklistPage() {
 
       return [...actual, accesorio];
     });
+  };
+
+  const cargarFotos = async () => {
+    try {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("fotos_recepcion")
+        .select("id, tipo, url")
+        .eq(
+          "orden_id",
+          ordenIdNumero
+        )
+        .order("id", {
+          ascending: true,
+        });
+
+      if (error) {
+        console.error(
+          "ERROR CARGANDO FOTOS:",
+          error
+        );
+        setFotosGuardadas([]);
+        return;
+      }
+
+      setFotosGuardadas(
+        (data || []) as FotoRecepcion[]
+      );
+    } catch (error) {
+      console.error(
+        "ERROR EN cargarFotos:",
+        error
+      );
+      setFotosGuardadas([]);
+    }
   };
 
   const cargarChecklist = async () => {
@@ -305,6 +365,9 @@ export default function ChecklistPage() {
         orden?.checklist_completado === true;
 
       setBloqueado(estaCerrado);
+
+      // 🔧 CARGAR FOTOS SIEMPRE
+      await cargarFotos();
 
       const {
         data,
@@ -379,14 +442,6 @@ export default function ChecklistPage() {
       const accesoriosEncontrados: string[] = [];
 
       data.forEach((fila: any) => {
-        /*
-         * Los accesorios se identifican por la categoría.
-         *
-         * IMPORTANTE:
-         * Ya no comprobamos estado === "RECIBIDO"
-         * porque RECIBIDO no está permitido por el
-         * CHECK CONSTRAINT de Supabase.
-         */
         if (
           fila.categoria === "Accesorios"
         ) {
@@ -518,12 +573,6 @@ export default function ChecklistPage() {
         return;
       }
 
-      /*
-       * ==================================================
-       * VERIFICAR NUEVAMENTE QUE LA ORDEN NO ESTÉ CERRADA
-       * ==================================================
-       */
-
       const {
         data: ordenSeguridad,
         error: errorOrdenSeguridad,
@@ -567,13 +616,6 @@ export default function ChecklistPage() {
         return;
       }
 
-      /*
-       * ==================================================
-       * PASO 1
-       * ELIMINAR CHECKLIST DE ENTRADA ANTERIOR
-       * ==================================================
-       */
-
       const {
         error: errorDelete,
       } = await supabase
@@ -613,13 +655,6 @@ export default function ChecklistPage() {
         return;
       }
 
-      /*
-       * ==================================================
-       * PASO 2
-       * CREAR FILAS DE PRUEBAS
-       * ==================================================
-       */
-
       const filas =
         seleccionados.map(
           (item, index) => {
@@ -656,22 +691,6 @@ export default function ChecklistPage() {
             };
           }
         );
-
-      /*
-       * ==================================================
-       * PASO 3
-       * CREAR FILAS DE ACCESORIOS
-       * ==================================================
-       *
-       * IMPORTANTE:
-       *
-       * "RECIBIDO" NO está permitido por el CHECK
-       * CONSTRAINT de Supabase.
-       *
-       * Por eso guardamos "FUNCIONA", que sí está
-       * permitido, y usamos categoria = "Accesorios"
-       * para saber que la fila corresponde a un accesorio.
-       */
 
       const filasAccesorios =
         accesorios.map(
@@ -715,13 +734,6 @@ export default function ChecklistPage() {
           2
         )
       );
-
-      /*
-       * ==================================================
-       * PASO 4
-       * INSERTAR CHECKLIST
-       * ==================================================
-       */
 
       const {
         data: datosInsertados,
@@ -771,13 +783,6 @@ export default function ChecklistPage() {
         "CHECKLIST INSERTADO CORRECTAMENTE:",
         datosInsertados
       );
-
-      /*
-       * ==================================================
-       * PASO 5
-       * CERRAR CHECKLIST
-       * ==================================================
-       */
 
       const fechaCierre =
         new Date().toISOString();
@@ -831,13 +836,6 @@ export default function ChecklistPage() {
 
         return;
       }
-
-      /*
-       * ==================================================
-       * PASO 6
-       * VERIFICAR QUE REALMENTE QUEDÓ CERRADO
-       * ==================================================
-       */
 
       if (
         !ordenActualizada
@@ -893,13 +891,6 @@ export default function ChecklistPage() {
         }
       }
 
-      /*
-       * ==================================================
-       * PASO 7
-       * BLOQUEAR INTERFAZ
-       * ==================================================
-       */
-
       setBloqueado(true);
 
       setMensaje(
@@ -926,6 +917,15 @@ export default function ChecklistPage() {
     }
   };
 
+  const fotosActualesPorTipo = (
+    tipo: string
+  ) => {
+    return fotosGuardadas.filter(
+      (foto) =>
+        foto.tipo === tipo
+    );
+  };
+
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-gray-900">
 
@@ -935,12 +935,12 @@ export default function ChecklistPage() {
           type="button"
           onClick={() =>
             router.push(
-              `/reparaciones/${ordenId}`
+              `/reparaciones`
             )
           }
           className="mb-6 text-sm font-semibold text-gray-500 transition hover:text-black"
         >
-          ← Volver a la orden
+          ← Volver a reparaciones
         </button>
 
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -1005,6 +1005,70 @@ export default function ChecklistPage() {
               </div>
             ) : (
               <>
+
+                {/* FOTOGRAFÍAS DE RECEPCIÓN */}
+                {fotosGuardadas.length > 0 && (
+                  <section className="mb-10 border-b border-gray-100 pb-10">
+                    <div className="mb-5">
+                      <h2 className="text-xl font-bold text-gray-950">
+                        Fotografías de recepción
+                      </h2>
+                      <p className="mt-1 text-xs text-gray-400">
+                        Fotos registradas al momento de recibir el equipo
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {TIPOS_FOTO.map((tipo) => {
+                        const fotosDelTipo = fotosActualesPorTipo(
+                          tipo.id
+                        );
+
+                        if (fotosDelTipo.length === 0) {
+                          return null;
+                        }
+
+                        return (
+                          <div
+                            key={tipo.id}
+                            className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50"
+                          >
+                            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">
+                                  {tipo.icono}
+                                </span>
+                                <span className="text-sm font-bold text-gray-900">
+                                  {tipo.nombre}
+                                </span>
+                              </div>
+                              <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700">
+                                GUARDADA
+                              </span>
+                            </div>
+
+                            <div className="space-y-2 p-3">
+                              {fotosDelTipo.map(
+                                (foto) => (
+                                  <div
+                                    key={foto.id}
+                                    className="overflow-hidden rounded-xl border border-gray-200 bg-white"
+                                  >
+                                    <img
+                                      src={foto.url}
+                                      alt={`Foto ${tipo.nombre}`}
+                                      className="aspect-[4/3] w-full object-cover"
+                                    />
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
 
                 {CATEGORIAS.map(
                   (categoria) => {
@@ -1243,7 +1307,7 @@ export default function ChecklistPage() {
 
                 </section>
 
-                <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                <div className="mt-8 grid gap-4 sm:grid-cols-4">
 
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
 
@@ -1271,6 +1335,18 @@ export default function ChecklistPage() {
                       {
                         accesorios.length
                       }
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+
+                    <p className="text-xs font-semibold text-gray-400">
+                      Fotografías
+                    </p>
+
+                    <p className="mt-1 text-2xl font-bold text-gray-950">
+                      {fotosGuardadas.length}
                     </p>
 
                   </div>
@@ -1311,12 +1387,12 @@ export default function ChecklistPage() {
                     type="button"
                     onClick={() =>
                       router.push(
-                        `/reparaciones/${ordenId}`
+                        `/reparaciones/${ordenId}/fotos`
                       )
                     }
                     className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                   >
-                    Volver a la orden
+                    📷 Ver/agregar fotos
                   </button>
 
                   {!bloqueado && (
