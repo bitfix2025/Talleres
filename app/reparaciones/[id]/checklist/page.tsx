@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -16,187 +17,434 @@ type ItemChecklist = {
   opciones: Opcion[];
 };
 
+/*
+ * ============================================================
+ * ESTADOS PERMITIDOS POR SUPABASE
+ * ============================================================
+ *
+ * Estos valores coinciden con:
+ *
+ * checklist_reparacion_estado_check
+ *
+ * No enviar ningún otro valor a la base de datos.
+ */
+
+const ESTADOS_PERMITIDOS = [
+  "FUNCIONA",
+  "NO_FUNCIONA",
+  "NO_PROBADO",
+  "NO_APLICA",
+  "SIN_DANOS",
+  "RAYADA",
+  "ROTA",
+  "MANCHAS",
+  "RAYADO",
+  "GOLPES",
+  "RAYONES",
+  "DOBLADO",
+  "SIN_DANOS_VISIBLES",
+  "VIDRIO_ROTO",
+  "LENTE_RAYADO",
+  "FALLA",
+] as const;
+
+type EstadoPermitido =
+  (typeof ESTADOS_PERMITIDOS)[number];
+
+/*
+ * Convierte cualquier estado recibido
+ * en un valor aceptado por Supabase.
+ */
+const normalizarEstado = (
+  estado: string | null | undefined
+): EstadoPermitido => {
+  const valor = String(
+    estado ?? ""
+  )
+    .trim()
+    .toUpperCase();
+
+  if (
+    (ESTADOS_PERMITIDOS as readonly string[]).includes(
+      valor
+    )
+  ) {
+    return valor as EstadoPermitido;
+  }
+
+  /*
+   * Si por cualquier motivo llega un estado
+   * desconocido, usamos NO_PROBADO.
+   */
+  return "NO_PROBADO";
+};
+
 const ITEMS: ItemChecklist[] = [
   {
     id: "pantalla",
     categoria: "Estado físico",
     prueba: "Pantalla",
     opciones: [
-      { texto: "Sin daños", estado: "FUNCIONA" },
-      { texto: "Rayada", estado: "NO_FUNCIONA" },
-      { texto: "Rota", estado: "NO_FUNCIONA" },
-      { texto: "Manchas", estado: "NO_FUNCIONA" },
-      { texto: "No enciende", estado: "NO_FUNCIONA" },
+      {
+        texto: "Sin daños",
+        estado: "SIN_DANOS",
+      },
+      {
+        texto: "Rayada",
+        estado: "RAYADA",
+      },
+      {
+        texto: "Rota",
+        estado: "ROTA",
+      },
+      {
+        texto: "Manchas",
+        estado: "MANCHAS",
+      },
+      {
+        texto: "No enciende",
+        estado: "NO_FUNCIONA",
+      },
     ],
   },
+
   {
     id: "vidrio_trasero",
     categoria: "Estado físico",
     prueba: "Vidrio trasero",
     opciones: [
-      { texto: "Sin daños", estado: "FUNCIONA" },
-      { texto: "Rayado", estado: "NO_FUNCIONA" },
-      { texto: "Roto", estado: "NO_FUNCIONA" },
+      {
+        texto: "Sin daños",
+        estado: "SIN_DANOS",
+      },
+      {
+        texto: "Rayado",
+        estado: "RAYADO",
+      },
+      {
+        texto: "Roto",
+        estado: "ROTA",
+      },
     ],
   },
+
   {
     id: "marco_chasis",
     categoria: "Estado físico",
     prueba: "Marco / chasis",
     opciones: [
-      { texto: "Sin daños", estado: "FUNCIONA" },
-      { texto: "Golpes", estado: "NO_FUNCIONA" },
-      { texto: "Rayones", estado: "NO_FUNCIONA" },
-      { texto: "Doblado", estado: "NO_FUNCIONA" },
+      {
+        texto: "Sin daños",
+        estado: "SIN_DANOS",
+      },
+      {
+        texto: "Golpes",
+        estado: "GOLPES",
+      },
+      {
+        texto: "Rayones",
+        estado: "RAYONES",
+      },
+      {
+        texto: "Doblado",
+        estado: "DOBLADO",
+      },
     ],
   },
+
   {
     id: "camaras",
     categoria: "Estado físico",
     prueba: "Cámaras",
     opciones: [
-      { texto: "Sin daños visibles", estado: "FUNCIONA" },
-      { texto: "Vidrio roto", estado: "NO_FUNCIONA" },
-      { texto: "Lente rayado", estado: "NO_FUNCIONA" },
+      {
+        texto: "Sin daños visibles",
+        estado: "SIN_DANOS_VISIBLES",
+      },
+      {
+        texto: "Vidrio roto",
+        estado: "VIDRIO_ROTO",
+      },
+      {
+        texto: "Lente rayado",
+        estado: "LENTE_RAYADO",
+      },
     ],
   },
+
   {
     id: "encendido",
     categoria: "Pruebas funcionales",
     prueba: "Encendido",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "No funciona", estado: "NO_FUNCIONA" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "No funciona",
+        estado: "NO_FUNCIONA",
+      },
     ],
   },
+
   {
     id: "face_id",
     categoria: "Pruebas funcionales",
     prueba: "Face ID",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "No funciona", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "No funciona",
+        estado: "NO_FUNCIONA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "touch",
     categoria: "Pruebas funcionales",
     prueba: "Touch / táctil",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "carga",
     categoria: "Pruebas funcionales",
     prueba: "Carga",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "camara_trasera",
     categoria: "Pruebas funcionales",
     prueba: "Cámara trasera",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "camara_frontal",
     categoria: "Pruebas funcionales",
     prueba: "Cámara frontal",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "microfono",
     categoria: "Pruebas funcionales",
     prueba: "Micrófono",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "altavoz",
     categoria: "Pruebas funcionales",
     prueba: "Altavoz",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "auricular",
     categoria: "Pruebas funcionales",
     prueba: "Auricular",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "vibracion",
     categoria: "Pruebas funcionales",
     prueba: "Vibración",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "wifi",
     categoria: "Conectividad",
     prueba: "Wi-Fi",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "bluetooth",
     categoria: "Conectividad",
     prueba: "Bluetooth",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "red_movil",
     categoria: "Conectividad",
     prueba: "Red móvil",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
+
   {
     id: "gps",
     categoria: "Conectividad",
     prueba: "GPS",
     opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
+      {
+        texto: "Funciona",
+        estado: "FUNCIONA",
+      },
+      {
+        texto: "Falla",
+        estado: "FALLA",
+      },
+      {
+        texto: "No probado",
+        estado: "NO_PROBADO",
+      },
     ],
   },
 ];
@@ -214,20 +462,18 @@ const ACCESORIOS = [
   "Caja",
 ];
 
-const ACCESORIOS_PRUEBA = "__ACCESORIOS__";
-
 export default function ChecklistPage() {
   const params = useParams();
   const router = useRouter();
 
   const ordenId = String(params.id);
-  const ordenNumero = Number(ordenId);
+  const ordenIdNumero = Number(ordenId);
 
-  const [respuestas, setRespuestas] = useState<
-    Record<string, string>
-  >({});
+  const [respuestas, setRespuestas] =
+    useState<Record<string, string>>({});
 
-  const [accesorios, setAccesorios] = useState<string[]>([]);
+  const [accesorios, setAccesorios] =
+    useState<string[]>([]);
 
   const [observaciones, setObservaciones] =
     useState("");
@@ -277,6 +523,22 @@ export default function ChecklistPage() {
       setCargando(true);
       setMensaje("");
 
+      if (
+        !ordenIdNumero ||
+        Number.isNaN(ordenIdNumero)
+      ) {
+        setMensaje(
+          "ID de orden inválido."
+        );
+        return;
+      }
+
+      /*
+       * ==================================================
+       * CARGAR ESTADO DE LA ORDEN
+       * ==================================================
+       */
+
       const {
         data: orden,
         error: errorOrden,
@@ -287,7 +549,7 @@ export default function ChecklistPage() {
         )
         .eq(
           "id",
-          ordenNumero
+          ordenIdNumero
         )
         .maybeSingle();
 
@@ -307,10 +569,15 @@ export default function ChecklistPage() {
         return;
       }
 
-      const estaCerrado =
-        orden?.checklist_completado === true;
+      setBloqueado(
+        orden?.checklist_completado === true
+      );
 
-      setBloqueado(estaCerrado);
+      /*
+       * ==================================================
+       * CARGAR CHECKLIST
+       * ==================================================
+       */
 
       const {
         data,
@@ -335,7 +602,7 @@ export default function ChecklistPage() {
         )
         .eq(
           "orden_id",
-          ordenNumero
+          ordenIdNumero
         )
         .eq(
           "momento",
@@ -364,10 +631,11 @@ export default function ChecklistPage() {
         return;
       }
 
+      setRespuestas({});
+      setAccesorios([]);
+      setObservaciones("");
+
       if (!data || data.length === 0) {
-        setRespuestas({});
-        setAccesorios([]);
-        setObservaciones("");
         return;
       }
 
@@ -376,44 +644,53 @@ export default function ChecklistPage() {
         string
       > = {};
 
+      const accesoriosEncontrados: string[] =
+        [];
+
       let nuevaObservacion = "";
-      let nuevosAccesorios: string[] = [];
+
+      /*
+       * ==================================================
+       * RECONSTRUIR INFORMACIÓN
+       * ==================================================
+       */
 
       data.forEach((fila: any) => {
         /*
-         * REGISTRO ESPECIAL DE ACCESORIOS
+         * ACCESORIOS
          */
-        if (
-          fila.prueba ===
-          ACCESORIOS_PRUEBA
-        ) {
-          try {
-            const accesoriosGuardados =
-              JSON.parse(
-                fila.observacion || "[]"
-              );
 
-            if (
-              Array.isArray(
-                accesoriosGuardados
-              )
-            ) {
-              nuevosAccesorios =
-                accesoriosGuardados.filter(
-                  (item) =>
-                    typeof item ===
-                      "string" &&
-                    ACCESORIOS.includes(
-                      item
-                    )
-                );
-            }
-          } catch {
-            nuevosAccesorios = [];
+        if (
+          fila.categoria ===
+          "Accesorios"
+        ) {
+          if (
+            ACCESORIOS.includes(
+              fila.prueba
+            ) &&
+            !accesoriosEncontrados.includes(
+              fila.prueba
+            )
+          ) {
+            accesoriosEncontrados.push(
+              fila.prueba
+            );
+          }
+
+          if (
+            fila.observacion &&
+            !nuevaObservacion
+          ) {
+            nuevaObservacion =
+              fila.observacion;
           }
 
           return;
         }
+
+        /*
+         * PRUEBAS
+         */
 
         const item = ITEMS.find(
           (item) =>
@@ -421,19 +698,25 @@ export default function ChecklistPage() {
             fila.prueba
         );
 
-        if (item) {
-          const opcion =
-            item.opciones.find(
-              (opcion) =>
-                opcion.estado ===
-                fila.estado
-            );
+        if (!item) return;
 
-          if (opcion) {
-            nuevasRespuestas[
-              item.id
-            ] = opcion.texto;
-          }
+        const estadoFila =
+          normalizarEstado(
+            fila.estado
+          );
+
+        const opcion =
+          item.opciones.find(
+            (opcion) =>
+              normalizarEstado(
+                opcion.estado
+              ) === estadoFila
+          );
+
+        if (opcion) {
+          nuevasRespuestas[
+            item.id
+          ] = opcion.texto;
         }
 
         if (
@@ -450,7 +733,7 @@ export default function ChecklistPage() {
       );
 
       setAccesorios(
-        nuevosAccesorios
+        accesoriosEncontrados
       );
 
       setObservaciones(
@@ -474,20 +757,14 @@ export default function ChecklistPage() {
   };
 
   useEffect(() => {
-    if (
-      !Number.isFinite(
-        ordenNumero
-      )
-    ) {
-      setCargando(false);
-      setMensaje(
-        "ID de orden inválido."
-      );
-      return;
-    }
-
     cargarChecklist();
   }, [ordenId]);
+
+  /*
+   * ============================================================
+   * GUARDAR CHECKLIST
+   * ============================================================
+   */
 
   const guardarChecklist = async () => {
     if (bloqueado) {
@@ -504,6 +781,23 @@ export default function ChecklistPage() {
       setGuardando(true);
       setMensaje("");
 
+      if (
+        !ordenIdNumero ||
+        Number.isNaN(ordenIdNumero)
+      ) {
+        setMensaje(
+          "ID de orden inválido."
+        );
+
+        return;
+      }
+
+      /*
+       * ==================================================
+       * COMPROBAR QUE HAYA INFORMACIÓN
+       * ==================================================
+       */
+
       const seleccionados =
         ITEMS.filter(
           (item) =>
@@ -511,10 +805,12 @@ export default function ChecklistPage() {
         );
 
       if (
-        seleccionados.length === 0
+        seleccionados.length === 0 &&
+        accesorios.length === 0 &&
+        !observaciones.trim()
       ) {
         setMensaje(
-          "Seleccioná al menos una prueba antes de guardar."
+          "Seleccioná al menos una prueba, accesorio u observación antes de guardar."
         );
 
         return;
@@ -522,34 +818,33 @@ export default function ChecklistPage() {
 
       /*
        * ==================================================
-       * PASO 1
-       * ELIMINAR CHECKLIST DE ENTRADA ANTERIOR
+       * COMPROBAR ESTADO REAL DE LA ORDEN
        * ==================================================
        */
 
       const {
-        error: errorDelete,
+        data: ordenActual,
+        error: errorEstado,
       } = await supabase
-        .from("checklist_reparacion")
-        .delete()
-        .eq(
-          "orden_id",
-          ordenNumero
+        .from("ordenes_reparacion")
+        .select(
+          "checklist_completado"
         )
         .eq(
-          "momento",
-          "ENTRADA"
-        );
+          "id",
+          ordenIdNumero
+        )
+        .maybeSingle();
 
-      if (errorDelete) {
+      if (errorEstado) {
         console.error(
-          "ERROR ELIMINANDO CHECKLIST ANTERIOR:",
-          errorDelete
+          "ERROR COMPROBANDO ESTADO:",
+          errorEstado
         );
 
         setMensaje(
-          `No se pudo preparar el checklist: ${
-            errorDelete.message ||
+          `No se pudo comprobar la orden: ${
+            errorEstado.message ||
             "Error desconocido"
           }`
         );
@@ -557,69 +852,205 @@ export default function ChecklistPage() {
         return;
       }
 
+      if (
+        ordenActual?.checklist_completado ===
+        true
+      ) {
+        setBloqueado(true);
+
+        setMensaje(
+          "Este checklist ya estaba cerrado."
+        );
+
+        return;
+      }
+
       /*
        * ==================================================
-       * PASO 2
-       * CREAR LAS FILAS DE LAS PRUEBAS
+       * CONSTRUIR FILAS
        * ==================================================
        */
 
-      const filas =
-        seleccionados.map(
-          (item, index) => {
-            const opcion =
-              item.opciones.find(
-                (opcion) =>
-                  opcion.texto ===
-                  respuestas[item.id]
-              );
+      const filas = seleccionados.map(
+        (item, index) => {
+          const opcion =
+            item.opciones.find(
+              (opcion) =>
+                opcion.texto ===
+                respuestas[item.id]
+            );
 
-            return {
-              orden_id:
-                ordenNumero,
+          /*
+           * MUY IMPORTANTE:
+           *
+           * Pasamos el estado por
+           * normalizarEstado().
+           *
+           * Así jamás enviamos a Supabase
+           * un estado que el CHECK constraint
+           * no permita.
+           */
 
-              momento:
-                "ENTRADA",
+          const estadoSeguro =
+            normalizarEstado(
+              opcion?.estado
+            );
 
-              categoria:
-                item.categoria,
+          return {
+            orden_id:
+              ordenIdNumero,
 
-              prueba:
-                item.prueba,
+            momento:
+              "ENTRADA",
 
-              estado:
-                opcion?.estado ||
-                "NO_PROBADO",
+            categoria:
+              item.categoria,
 
-              observacion:
-                observaciones.trim() ||
-                null,
+            prueba:
+              item.prueba,
 
-              orden_prueba:
-                index + 1,
-            };
-          }
-        );
+            estado:
+              estadoSeguro,
+
+            observacion:
+              observaciones.trim() ||
+              null,
+
+            orden_prueba:
+              index + 1,
+          };
+        }
+      );
 
       /*
        * ==================================================
-       * PASO 3
-       * GUARDAR LAS PRUEBAS
+       * ACCESORIOS
+       * ==================================================
+       *
+       * RECIBIDO NO está permitido por tu constraint.
+       *
+       * Usamos FUNCIONA, que sí está permitido.
+       */
+
+      const filasAccesorios =
+        accesorios.map(
+          (accesorio, index) => ({
+            orden_id:
+              ordenIdNumero,
+
+            momento:
+              "ENTRADA",
+
+            categoria:
+              "Accesorios",
+
+            prueba:
+              accesorio,
+
+            estado:
+              "FUNCIONA" as EstadoPermitido,
+
+            observacion:
+              observaciones.trim() ||
+              null,
+
+            orden_prueba:
+              filas.length +
+              index +
+              1,
+          })
+        );
+
+      const filasFinales = [
+        ...filas,
+        ...filasAccesorios,
+      ];
+
+      /*
+       * ==================================================
+       * SEGURIDAD EXTRA
+       * ==================================================
+       *
+       * Antes del INSERT mostramos en consola
+       * exactamente qué vamos a mandar.
+       */
+
+      console.log(
+        "CHECKLIST A INSERTAR:",
+        JSON.stringify(
+          filasFinales,
+          null,
+          2
+        )
+      );
+
+      /*
+       * Comprobamos nuevamente que TODOS
+       * los estados sean válidos.
+       */
+
+      const estadoInvalido =
+        filasFinales.find(
+          (fila) =>
+            !(
+              ESTADOS_PERMITIDOS as readonly string[]
+            ).includes(
+              String(
+                fila.estado
+              )
+            )
+        );
+
+      if (estadoInvalido) {
+        console.error(
+          "ESTADO INVÁLIDO DETECTADO:",
+          estadoInvalido
+        );
+
+        setMensaje(
+          `Estado inválido detectado en "${estadoInvalido.prueba}": ${estadoInvalido.estado}`
+        );
+
+        return;
+      }
+
+      /*
+       * ==================================================
+       * INSERTAR
        * ==================================================
        */
 
       const {
+        data: insertados,
         error: errorInsert,
       } = await supabase
         .from(
           "checklist_reparacion"
         )
-        .insert(filas);
+        .insert(
+          filasFinales
+        )
+        .select();
 
       if (errorInsert) {
         console.error(
           "ERROR INSERTANDO CHECKLIST:",
-          errorInsert
+          JSON.stringify(
+            {
+              code:
+                errorInsert.code,
+              details:
+                errorInsert.details,
+              hint:
+                errorInsert.hint,
+              message:
+                errorInsert.message,
+              filas:
+                filasFinales,
+            },
+            null,
+            2
+          )
         );
 
         setMensaje(
@@ -634,77 +1065,99 @@ export default function ChecklistPage() {
 
       /*
        * ==================================================
-       * PASO 4
-       * GUARDAR ACCESORIOS
-       *
-       * Se utiliza una fila especial del mismo
-       * checklist para no necesitar otra tabla.
+       * LIMPIAR REGISTROS ANTERIORES
        * ==================================================
+       *
+       * Primero insertamos correctamente.
+       * Después eliminamos registros antiguos.
        */
 
+      const idsNuevos =
+        (insertados || [])
+          .map(
+            (fila: any) =>
+              fila.id
+          )
+          .filter(Boolean);
+
+      const {
+        data: entradasActuales,
+        error:
+          errorBuscarEntradas,
+      } = await supabase
+        .from(
+          "checklist_reparacion"
+        )
+        .select("id")
+        .eq(
+          "orden_id",
+          ordenIdNumero
+        )
+        .eq(
+          "momento",
+          "ENTRADA"
+        );
+
       if (
-        accesorios.length > 0
+        errorBuscarEntradas
+      ) {
+        console.error(
+          "ERROR BUSCANDO CHECKLISTS ANTERIORES:",
+          errorBuscarEntradas
+        );
+
+        /*
+         * El nuevo checklist ya está guardado.
+         */
+
+        setMensaje(
+          `Checklist guardado, pero no se pudieron limpiar registros anteriores: ${
+            errorBuscarEntradas.message ||
+            "Error desconocido"
+          }`
+        );
+
+        return;
+      }
+
+      const idsAnteriores =
+        (entradasActuales || [])
+          .map(
+            (fila: any) =>
+              fila.id
+          )
+          .filter(
+            (id: any) =>
+              !idsNuevos.includes(
+                id
+              )
+          );
+
+      if (
+        idsAnteriores.length >
+        0
       ) {
         const {
-          error:
-            errorAccesorios,
+          error: errorDelete,
         } = await supabase
           .from(
             "checklist_reparacion"
           )
-          .insert({
-            orden_id:
-              ordenNumero,
-
-            momento:
-              "ENTRADA",
-
-            categoria:
-              "Accesorios",
-
-            prueba:
-              ACCESORIOS_PRUEBA,
-
-            estado:
-              "RECIBIDO",
-
-            observacion:
-              JSON.stringify(
-                accesorios
-              ),
-
-            orden_prueba:
-              999,
-          });
-
-        if (errorAccesorios) {
-          console.error(
-            "ERROR GUARDANDO ACCESORIOS:",
-            errorAccesorios
+          .delete()
+          .in(
+            "id",
+            idsAnteriores
           );
 
-          /*
-           * Intentamos eliminar lo que se acaba
-           * de guardar para no dejar un checklist
-           * incompleto.
-           */
-          await supabase
-            .from(
-              "checklist_reparacion"
-            )
-            .delete()
-            .eq(
-              "orden_id",
-              ordenNumero
-            )
-            .eq(
-              "momento",
-              "ENTRADA"
-            );
+        if (errorDelete) {
+          console.error(
+            "ERROR ELIMINANDO CHECKLISTS ANTERIORES:",
+            errorDelete
+          );
 
           setMensaje(
-            `Error guardando accesorios: ${
-              errorAccesorios.message ||
+            `Checklist guardado, pero no se pudieron eliminar registros anteriores: ${
+              errorDelete.message ||
               "Error desconocido"
             }`
           );
@@ -715,7 +1168,6 @@ export default function ChecklistPage() {
 
       /*
        * ==================================================
-       * PASO 5
        * CERRAR CHECKLIST
        * ==================================================
        */
@@ -724,6 +1176,8 @@ export default function ChecklistPage() {
         new Date().toISOString();
 
       const {
+        data:
+          ordenActualizada,
         error: errorCerrar,
       } = await supabase
         .from(
@@ -738,12 +1192,16 @@ export default function ChecklistPage() {
         })
         .eq(
           "id",
-          ordenNumero
+          ordenIdNumero
         )
         .eq(
           "checklist_completado",
           false
-        );
+        )
+        .select(
+          "checklist_completado, checklist_fecha"
+        )
+        .maybeSingle();
 
       if (errorCerrar) {
         console.error(
@@ -763,8 +1221,62 @@ export default function ChecklistPage() {
 
       /*
        * ==================================================
-       * PASO 6
-       * BLOQUEAR PANTALLA
+       * VERIFICAR CIERRE
+       * ==================================================
+       */
+
+      if (!ordenActualizada) {
+        const {
+          data:
+            ordenVerificada,
+          error:
+            errorVerificacion,
+        } = await supabase
+          .from(
+            "ordenes_reparacion"
+          )
+          .select(
+            "checklist_completado, checklist_fecha"
+          )
+          .eq(
+            "id",
+            ordenIdNumero
+          )
+          .maybeSingle();
+
+        if (
+          errorVerificacion
+        ) {
+          console.error(
+            "ERROR VERIFICANDO CIERRE:",
+            errorVerificacion
+          );
+
+          setMensaje(
+            `El checklist se guardó, pero no se pudo confirmar el cierre: ${
+              errorVerificacion.message ||
+              "Error desconocido"
+            }`
+          );
+
+          return;
+        }
+
+        if (
+          ordenVerificada?.checklist_completado !==
+          true
+        ) {
+          setMensaje(
+            "El checklist se guardó, pero la orden no pudo cerrarse."
+          );
+
+          return;
+        }
+      }
+
+      /*
+       * ==================================================
+       * TODO CORRECTO
        * ==================================================
        */
 
@@ -792,12 +1304,16 @@ export default function ChecklistPage() {
     }
   };
 
+  /*
+   * ============================================================
+   * INTERFAZ
+   * ============================================================
+   */
+
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-gray-900">
 
       <div className="mx-auto max-w-[1200px] p-5 md:p-8">
-
-        {/* VOLVER */}
 
         <button
           type="button"
@@ -830,7 +1346,7 @@ export default function ChecklistPage() {
                 </h1>
 
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
-                  Comprobá el estado físico y funcional del equipo antes de comenzar la reparación.
+                  Comprueba el estado físico y funcional del equipo antes de comenzar la reparación.
                 </p>
 
               </div>
@@ -868,7 +1384,6 @@ export default function ChecklistPage() {
             )}
 
             {cargando ? (
-
               <div className="flex min-h-[300px] items-center justify-center">
 
                 <p className="text-sm font-semibold text-gray-500">
@@ -876,9 +1391,7 @@ export default function ChecklistPage() {
                 </p>
 
               </div>
-
             ) : (
-
               <>
 
                 {/* CATEGORÍAS */}
@@ -894,7 +1407,6 @@ export default function ChecklistPage() {
                       );
 
                     return (
-
                       <section
                         key={categoria}
                         className="mb-8 border-b border-gray-100 pb-8"
@@ -909,7 +1421,7 @@ export default function ChecklistPage() {
                           <p className="mt-1 text-xs text-gray-400">
                             {bloqueado
                               ? "Estado registrado al recibir el equipo."
-                              : "Registrá el estado del equipo."}
+                              : "Registra el estado del equipo."}
                           </p>
 
                         </div>
@@ -942,9 +1454,7 @@ export default function ChecklistPage() {
                                     bloqueado ||
                                     guardando
                                   }
-                                  onChange={(
-                                    e
-                                  ) =>
+                                  onChange={(e) =>
                                     cambiarRespuesta(
                                       item.id,
                                       e.target.value
@@ -994,7 +1504,6 @@ export default function ChecklistPage() {
                         </div>
 
                       </section>
-
                     );
                   }
                 )}
@@ -1012,7 +1521,7 @@ export default function ChecklistPage() {
                     <p className="mt-1 text-xs text-gray-400">
                       {bloqueado
                         ? "Accesorios registrados al recibir el equipo."
-                        : "Marcá los accesorios que quedaron en el taller."}
+                        : "Marca los accesorios que quedaron en el taller."}
                     </p>
 
                   </div>
@@ -1028,7 +1537,6 @@ export default function ChecklistPage() {
                           );
 
                         return (
-
                           <label
                             key={
                               accesorio
@@ -1064,45 +1572,24 @@ export default function ChecklistPage() {
                             </span>
 
                           </label>
-
                         );
                       }
                     )}
 
                   </div>
 
-                  {/* RESUMEN DE ACCESORIOS */}
-
                   {accesorios.length >
                     0 && (
+                    <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
 
-                    <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4">
-
-                      <p className="text-xs font-bold uppercase tracking-wider text-green-700">
-                        Accesorios registrados
+                      <p className="text-xs font-semibold text-green-700">
+                        Accesorios registrados:{" "}
+                        {accesorios.join(
+                          ", "
+                        )}
                       </p>
 
-                      <div className="mt-3 flex flex-wrap gap-2">
-
-                        {accesorios.map(
-                          (accesorio) => (
-
-                            <span
-                              key={
-                                accesorio
-                              }
-                              className="rounded-full border border-green-200 bg-white px-3 py-1.5 text-xs font-semibold text-green-700"
-                            >
-                              ✓ {accesorio}
-                            </span>
-
-                          )
-                        )}
-
-                      </div>
-
                     </div>
-
                   )}
 
                 </section>
@@ -1120,7 +1607,7 @@ export default function ChecklistPage() {
                     <p className="mt-1 text-xs text-gray-400">
                       {bloqueado
                         ? "Observaciones registradas al recibir el equipo."
-                        : "Registrá cualquier detalle adicional del equipo."}
+                        : "Registra cualquier detalle adicional del equipo."}
                     </p>
 
                   </div>
@@ -1149,10 +1636,59 @@ export default function ChecklistPage() {
 
                 </section>
 
+                {/* RESUMEN */}
+
+                <div className="mt-8 grid gap-4 sm:grid-cols-3">
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+
+                    <p className="text-xs font-semibold text-gray-400">
+                      Pruebas registradas
+                    </p>
+
+                    <p className="mt-1 text-2xl font-bold text-gray-950">
+                      {
+                        Object.keys(
+                          respuestas
+                        ).length
+                      }
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+
+                    <p className="text-xs font-semibold text-gray-400">
+                      Accesorios
+                    </p>
+
+                    <p className="mt-1 text-2xl font-bold text-gray-950">
+                      {
+                        accesorios.length
+                      }
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+
+                    <p className="text-xs font-semibold text-gray-400">
+                      Estado
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-gray-950">
+                      {bloqueado
+                        ? "CERRADO"
+                        : "PENDIENTE"}
+                    </p>
+
+                  </div>
+
+                </div>
+
                 {/* MENSAJE */}
 
                 {mensaje && (
-
                   <div
                     className={`mt-6 rounded-xl border px-4 py-3 text-sm font-semibold ${
                       mensaje.includes(
@@ -1164,7 +1700,6 @@ export default function ChecklistPage() {
                   >
                     {mensaje}
                   </div>
-
                 )}
 
                 {/* BOTONES */}
@@ -1184,7 +1719,6 @@ export default function ChecklistPage() {
                   </button>
 
                   {!bloqueado && (
-
                     <button
                       type="button"
                       onClick={
@@ -1199,13 +1733,11 @@ export default function ChecklistPage() {
                         ? "Guardando..."
                         : "Guardar y cerrar checklist"}
                     </button>
-
                   )}
 
                 </div>
 
               </>
-
             )}
 
           </div>
@@ -1221,7 +1753,7 @@ export default function ChecklistPage() {
         </div>
 
       </div>
-
     </main>
   );
 }
+
