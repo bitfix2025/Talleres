@@ -412,31 +412,40 @@ export default function ChecklistPage() {
   };
 
   const cargarFotos = async () => {
-    const {
-      data,
-      error,
-    } = await supabase
-      .from("fotos_recepcion")
-      .select("id, tipo, url")
-      .eq(
-        "orden_id",
-        ordenIdNumero
-      )
-      .order("id", {
-        ascending: true,
-      });
+    try {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("fotos_recepcion")
+        .select("id, tipo, url")
+        .eq(
+          "orden_id",
+          ordenIdNumero
+        )
+        .order("id", {
+          ascending: true,
+        });
 
-    if (error) {
+      if (error) {
+        console.error(
+          "ERROR CARGANDO FOTOS:",
+          error
+        );
+        setFotosGuardadas([]);
+        return;
+      }
+
+      setFotosGuardadas(
+        (data || []) as FotoRecepcion[]
+      );
+    } catch (error) {
       console.error(
-        "ERROR CARGANDO FOTOS:",
+        "ERROR EN cargarFotos:",
         error
       );
-      return;
+      setFotosGuardadas([]);
     }
-
-    setFotosGuardadas(
-      (data || []) as FotoRecepcion[]
-    );
   };
 
   const cargarChecklist = async () => {
@@ -532,6 +541,7 @@ export default function ChecklistPage() {
       setAccesorios([]);
       setObservaciones("");
 
+      // 🔧 FIX: Cargar fotos ANTES de continuar con el resto
       await cargarFotos();
 
       if (
@@ -1056,6 +1066,8 @@ export default function ChecklistPage() {
         }
       }
 
+      // 🔧 FIX: Cargar fotos INMEDIATAMENTE después de guardar
+      // y ANTES de cambiar el estado de bloqueado
       await cargarFotos();
 
       setBloqueado(true);
@@ -1064,7 +1076,8 @@ export default function ChecklistPage() {
         "Checklist guardado y cerrado correctamente."
       );
 
-      await cargarChecklist();
+      // 🔧 FIX: Ya NO llamamos a cargarChecklist() aquí
+      // porque resetearía las fotos. Solo recargamos las fotos.
     } catch (error: any) {
       console.error(
         "ERROR GUARDANDO CHECKLIST:",
