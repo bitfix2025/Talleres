@@ -947,14 +947,6 @@ export default function ChecklistPage() {
        * --------------------------------------------------------
        * CONSTRUIR FILAS DE ACCESORIOS
        * --------------------------------------------------------
-       *
-       * La base de datos NO acepta "RECIBIDO".
-       *
-       * Guardamos "FUNCIONA" porque está permitido
-       * por el CHECK constraint.
-       *
-       * La categoría "Accesorios" permite saber que
-       * esa fila corresponde a un accesorio.
        */
 
       const filasAccesorios =
@@ -1215,11 +1207,14 @@ export default function ChecklistPage() {
       );
 
       /*
-       * No hace falta volver a guardar.
-       * Solo recargamos para mostrar los datos.
+       * --------------------------------------------------------
+       * IR AUTOMÁTICAMENTE A LAS FOTOS
+       * --------------------------------------------------------
        */
 
-      await cargarChecklist();
+      router.push(
+        `/reparaciones/${ordenId}/fotos`
+      );
     } catch (error: any) {
       console.error(
         "ERROR GUARDANDO CHECKLIST:",
