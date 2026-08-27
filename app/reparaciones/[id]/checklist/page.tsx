@@ -7,7 +7,7 @@ import { supabase } from "../../../../lib/supabase";
 
 type Opcion = {
   texto: string;
-  estado: string;
+  estado: EstadoPermitido;
 };
 
 type ItemChecklist = {
@@ -21,12 +21,6 @@ type ItemChecklist = {
  * ============================================================
  * ESTADOS PERMITIDOS POR SUPABASE
  * ============================================================
- *
- * Estos valores coinciden con:
- *
- * checklist_reparacion_estado_check
- *
- * No enviar ningún otro valor a la base de datos.
  */
 
 const ESTADOS_PERMITIDOS = [
@@ -52,15 +46,15 @@ type EstadoPermitido =
   (typeof ESTADOS_PERMITIDOS)[number];
 
 /*
- * Convierte cualquier estado recibido
- * en un valor aceptado por Supabase.
+ * ============================================================
+ * NORMALIZAR ESTADO
+ * ============================================================
  */
+
 const normalizarEstado = (
   estado: string | null | undefined
 ): EstadoPermitido => {
-  const valor = String(
-    estado ?? ""
-  )
+  const valor = String(estado ?? "")
     .trim()
     .toUpperCase();
 
@@ -72,12 +66,14 @@ const normalizarEstado = (
     return valor as EstadoPermitido;
   }
 
-  /*
-   * Si por cualquier motivo llega un estado
-   * desconocido, usamos NO_PROBADO.
-   */
   return "NO_PROBADO";
 };
+
+/*
+ * ============================================================
+ * ITEMS DEL CHECKLIST
+ * ============================================================
+ */
 
 const ITEMS: ItemChecklist[] = [
   {
@@ -462,6 +458,12 @@ const ACCESORIOS = [
   "Caja",
 ];
 
+/*
+ * ============================================================
+ * COMPONENTE
+ * ============================================================
+ */
+
 export default function ChecklistPage() {
   const params = useParams();
   const router = useRouter();
@@ -490,6 +492,12 @@ export default function ChecklistPage() {
   const [bloqueado, setBloqueado] =
     useState(false);
 
+  /*
+   * ============================================================
+   * CAMBIAR RESPUESTA
+   * ============================================================
+   */
+
   const cambiarRespuesta = (
     itemId: string,
     valor: string
@@ -501,6 +509,12 @@ export default function ChecklistPage() {
       [itemId]: valor,
     }));
   };
+
+  /*
+   * ============================================================
+   * CAMBIAR ACCESORIO
+   * ============================================================
+   */
 
   const cambiarAccesorio = (
     accesorio: string
@@ -518,6 +532,12 @@ export default function ChecklistPage() {
     });
   };
 
+  /*
+   * ============================================================
+   * CARGAR CHECKLIST
+   * ============================================================
+   */
+
   const cargarChecklist = async () => {
     try {
       setCargando(true);
@@ -527,16 +547,14 @@ export default function ChecklistPage() {
         !ordenIdNumero ||
         Number.isNaN(ordenIdNumero)
       ) {
-        setMensaje(
-          "ID de orden inválido."
-        );
+        setMensaje("ID de orden inválido.");
         return;
       }
 
       /*
-       * ==================================================
-       * CARGAR ESTADO DE LA ORDEN
-       * ==================================================
+       * --------------------------------------------------------
+       * ESTADO DE LA ORDEN
+       * --------------------------------------------------------
        */
 
       const {
@@ -574,9 +592,9 @@ export default function ChecklistPage() {
       );
 
       /*
-       * ==================================================
-       * CARGAR CHECKLIST
-       * ==================================================
+       * --------------------------------------------------------
+       * CHECKLIST
+       * --------------------------------------------------------
        */
 
       const {
@@ -650,9 +668,9 @@ export default function ChecklistPage() {
       let nuevaObservacion = "";
 
       /*
-       * ==================================================
-       * RECONSTRUIR INFORMACIÓN
-       * ==================================================
+       * --------------------------------------------------------
+       * RECONSTRUIR DATOS
+       * --------------------------------------------------------
        */
 
       data.forEach((fila: any) => {
@@ -698,7 +716,9 @@ export default function ChecklistPage() {
             fila.prueba
         );
 
-        if (!item) return;
+        if (!item) {
+          return;
+        }
 
         const estadoFila =
           normalizarEstado(
@@ -756,6 +776,12 @@ export default function ChecklistPage() {
     }
   };
 
+  /*
+   * ============================================================
+   * CARGAR AL ENTRAR
+   * ============================================================
+   */
+
   useEffect(() => {
     cargarChecklist();
   }, [ordenId]);
@@ -781,6 +807,12 @@ export default function ChecklistPage() {
       setGuardando(true);
       setMensaje("");
 
+      /*
+       * --------------------------------------------------------
+       * VALIDAR ID
+       * --------------------------------------------------------
+       */
+
       if (
         !ordenIdNumero ||
         Number.isNaN(ordenIdNumero)
@@ -793,9 +825,9 @@ export default function ChecklistPage() {
       }
 
       /*
-       * ==================================================
-       * COMPROBAR QUE HAYA INFORMACIÓN
-       * ==================================================
+       * --------------------------------------------------------
+       * VALIDAR QUE HAYA INFORMACIÓN
+       * --------------------------------------------------------
        */
 
       const seleccionados =
@@ -817,9 +849,9 @@ export default function ChecklistPage() {
       }
 
       /*
-       * ==================================================
-       * COMPROBAR ESTADO REAL DE LA ORDEN
-       * ==================================================
+       * --------------------------------------------------------
+       * VERIFICAR ESTADO REAL
+       * --------------------------------------------------------
        */
 
       const {
@@ -866,9 +898,9 @@ export default function ChecklistPage() {
       }
 
       /*
-       * ==================================================
-       * CONSTRUIR FILAS
-       * ==================================================
+       * --------------------------------------------------------
+       * CONSTRUIR FILAS DE PRUEBAS
+       * --------------------------------------------------------
        */
 
       const filas = seleccionados.map(
@@ -879,17 +911,6 @@ export default function ChecklistPage() {
                 opcion.texto ===
                 respuestas[item.id]
             );
-
-          /*
-           * MUY IMPORTANTE:
-           *
-           * Pasamos el estado por
-           * normalizarEstado().
-           *
-           * Así jamás enviamos a Supabase
-           * un estado que el CHECK constraint
-           * no permita.
-           */
 
           const estadoSeguro =
             normalizarEstado(
@@ -923,13 +944,17 @@ export default function ChecklistPage() {
       );
 
       /*
-       * ==================================================
-       * ACCESORIOS
-       * ==================================================
+       * --------------------------------------------------------
+       * CONSTRUIR FILAS DE ACCESORIOS
+       * --------------------------------------------------------
        *
-       * RECIBIDO NO está permitido por tu constraint.
+       * La base de datos NO acepta "RECIBIDO".
        *
-       * Usamos FUNCIONA, que sí está permitido.
+       * Guardamos "FUNCIONA" porque está permitido
+       * por el CHECK constraint.
+       *
+       * La categoría "Accesorios" permite saber que
+       * esa fila corresponde a un accesorio.
        */
 
       const filasAccesorios =
@@ -967,26 +992,9 @@ export default function ChecklistPage() {
       ];
 
       /*
-       * ==================================================
-       * SEGURIDAD EXTRA
-       * ==================================================
-       *
-       * Antes del INSERT mostramos en consola
-       * exactamente qué vamos a mandar.
-       */
-
-      console.log(
-        "CHECKLIST A INSERTAR:",
-        JSON.stringify(
-          filasFinales,
-          null,
-          2
-        )
-      );
-
-      /*
-       * Comprobamos nuevamente que TODOS
-       * los estados sean válidos.
+       * --------------------------------------------------------
+       * SEGURIDAD
+       * --------------------------------------------------------
        */
 
       const estadoInvalido =
@@ -1003,21 +1011,30 @@ export default function ChecklistPage() {
 
       if (estadoInvalido) {
         console.error(
-          "ESTADO INVÁLIDO DETECTADO:",
+          "ESTADO INVÁLIDO:",
           estadoInvalido
         );
 
         setMensaje(
-          `Estado inválido detectado en "${estadoInvalido.prueba}": ${estadoInvalido.estado}`
+          `Estado inválido en "${estadoInvalido.prueba}": ${estadoInvalido.estado}`
         );
 
         return;
       }
 
+      console.log(
+        "CHECKLIST A INSERTAR:",
+        JSON.stringify(
+          filasFinales,
+          null,
+          2
+        )
+      );
+
       /*
-       * ==================================================
-       * INSERTAR
-       * ==================================================
+       * --------------------------------------------------------
+       * INSERTAR CHECKLIST
+       * --------------------------------------------------------
        */
 
       const {
@@ -1035,27 +1052,30 @@ export default function ChecklistPage() {
       if (errorInsert) {
         console.error(
           "ERROR INSERTANDO CHECKLIST:",
-          JSON.stringify(
-            {
-              code:
-                errorInsert.code,
-              details:
-                errorInsert.details,
-              hint:
-                errorInsert.hint,
-              message:
-                errorInsert.message,
-              filas:
-                filasFinales,
-            },
-            null,
-            2
-          )
+          {
+            code:
+              errorInsert.code,
+
+            message:
+              errorInsert.message,
+
+            details:
+              errorInsert.details,
+
+            hint:
+              errorInsert.hint,
+
+            filas:
+              filasFinales,
+          }
         );
 
         setMensaje(
           `Error guardando checklist: ${
             errorInsert.message ||
+            errorInsert.details ||
+            errorInsert.hint ||
+            errorInsert.code ||
             "Error desconocido"
           }`
         );
@@ -1063,113 +1083,15 @@ export default function ChecklistPage() {
         return;
       }
 
-      /*
-       * ==================================================
-       * LIMPIAR REGISTROS ANTERIORES
-       * ==================================================
-       *
-       * Primero insertamos correctamente.
-       * Después eliminamos registros antiguos.
-       */
-
-      const idsNuevos =
-        (insertados || [])
-          .map(
-            (fila: any) =>
-              fila.id
-          )
-          .filter(Boolean);
-
-      const {
-        data: entradasActuales,
-        error:
-          errorBuscarEntradas,
-      } = await supabase
-        .from(
-          "checklist_reparacion"
-        )
-        .select("id")
-        .eq(
-          "orden_id",
-          ordenIdNumero
-        )
-        .eq(
-          "momento",
-          "ENTRADA"
-        );
-
-      if (
-        errorBuscarEntradas
-      ) {
-        console.error(
-          "ERROR BUSCANDO CHECKLISTS ANTERIORES:",
-          errorBuscarEntradas
-        );
-
-        /*
-         * El nuevo checklist ya está guardado.
-         */
-
-        setMensaje(
-          `Checklist guardado, pero no se pudieron limpiar registros anteriores: ${
-            errorBuscarEntradas.message ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
-      }
-
-      const idsAnteriores =
-        (entradasActuales || [])
-          .map(
-            (fila: any) =>
-              fila.id
-          )
-          .filter(
-            (id: any) =>
-              !idsNuevos.includes(
-                id
-              )
-          );
-
-      if (
-        idsAnteriores.length >
-        0
-      ) {
-        const {
-          error: errorDelete,
-        } = await supabase
-          .from(
-            "checklist_reparacion"
-          )
-          .delete()
-          .in(
-            "id",
-            idsAnteriores
-          );
-
-        if (errorDelete) {
-          console.error(
-            "ERROR ELIMINANDO CHECKLISTS ANTERIORES:",
-            errorDelete
-          );
-
-          setMensaje(
-            `Checklist guardado, pero no se pudieron eliminar registros anteriores: ${
-              errorDelete.message ||
-              "Error desconocido"
-            }`
-          );
-
-          return;
-        }
-      }
+      console.log(
+        "CHECKLIST INSERTADO:",
+        insertados
+      );
 
       /*
-       * ==================================================
+       * --------------------------------------------------------
        * CERRAR CHECKLIST
-       * ==================================================
+       * --------------------------------------------------------
        */
 
       const fechaCierre =
@@ -1212,6 +1134,9 @@ export default function ChecklistPage() {
         setMensaje(
           `El checklist se guardó, pero no se pudo cerrar: ${
             errorCerrar.message ||
+            errorCerrar.details ||
+            errorCerrar.hint ||
+            errorCerrar.code ||
             "Error desconocido"
           }`
         );
@@ -1220,9 +1145,9 @@ export default function ChecklistPage() {
       }
 
       /*
-       * ==================================================
+       * --------------------------------------------------------
        * VERIFICAR CIERRE
-       * ==================================================
+       * --------------------------------------------------------
        */
 
       if (!ordenActualizada) {
@@ -1255,6 +1180,9 @@ export default function ChecklistPage() {
           setMensaje(
             `El checklist se guardó, pero no se pudo confirmar el cierre: ${
               errorVerificacion.message ||
+              errorVerificacion.details ||
+              errorVerificacion.hint ||
+              errorVerificacion.code ||
               "Error desconocido"
             }`
           );
@@ -1275,9 +1203,9 @@ export default function ChecklistPage() {
       }
 
       /*
-       * ==================================================
+       * --------------------------------------------------------
        * TODO CORRECTO
-       * ==================================================
+       * --------------------------------------------------------
        */
 
       setBloqueado(true);
@@ -1285,6 +1213,11 @@ export default function ChecklistPage() {
       setMensaje(
         "Checklist guardado y cerrado correctamente."
       );
+
+      /*
+       * No hace falta volver a guardar.
+       * Solo recargamos para mostrar los datos.
+       */
 
       await cargarChecklist();
     } catch (error: any) {
@@ -1315,6 +1248,8 @@ export default function ChecklistPage() {
 
       <div className="mx-auto max-w-[1200px] p-5 md:p-8">
 
+        {/* VOLVER */}
+
         <button
           type="button"
           onClick={() =>
@@ -1329,7 +1264,9 @@ export default function ChecklistPage() {
 
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
-          {/* ENCABEZADO */}
+          {/* ==================================================
+              ENCABEZADO
+          ================================================== */}
 
           <div className="border-b border-gray-100 p-6 md:p-8">
 
@@ -1367,7 +1304,9 @@ export default function ChecklistPage() {
 
           <div className="p-6 md:p-8">
 
-            {/* AVISO */}
+            {/* ==================================================
+                AVISO CHECKLIST CERRADO
+            ================================================== */}
 
             {bloqueado && (
               <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
@@ -1384,6 +1323,7 @@ export default function ChecklistPage() {
             )}
 
             {cargando ? (
+
               <div className="flex min-h-[300px] items-center justify-center">
 
                 <p className="text-sm font-semibold text-gray-500">
@@ -1391,10 +1331,14 @@ export default function ChecklistPage() {
                 </p>
 
               </div>
+
             ) : (
+
               <>
 
-                {/* CATEGORÍAS */}
+                {/* ==================================================
+                    CATEGORÍAS
+                ================================================== */}
 
                 {CATEGORIAS.map(
                   (categoria) => {
@@ -1407,6 +1351,7 @@ export default function ChecklistPage() {
                       );
 
                     return (
+
                       <section
                         key={categoria}
                         className="mb-8 border-b border-gray-100 pb-8"
@@ -1432,7 +1377,9 @@ export default function ChecklistPage() {
                             (item) => (
 
                               <div
-                                key={item.id}
+                                key={
+                                  item.id
+                                }
                                 className={`rounded-xl border p-4 transition ${
                                   bloqueado
                                     ? "border-gray-200 bg-gray-50"
@@ -1441,23 +1388,29 @@ export default function ChecklistPage() {
                               >
 
                                 <label className="block text-sm font-bold text-gray-900">
-                                  {item.prueba}
+                                  {
+                                    item.prueba
+                                  }
                                 </label>
 
                                 <select
                                   value={
                                     respuestas[
                                       item.id
-                                    ] || ""
+                                    ] ||
+                                    ""
                                   }
                                   disabled={
                                     bloqueado ||
                                     guardando
                                   }
-                                  onChange={(e) =>
+                                  onChange={(
+                                    e
+                                  ) =>
                                     cambiarRespuesta(
                                       item.id,
-                                      e.target.value
+                                      e.target
+                                        .value
                                     )
                                   }
                                   className={`mt-3 h-11 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none transition ${
@@ -1504,11 +1457,14 @@ export default function ChecklistPage() {
                         </div>
 
                       </section>
+
                     );
                   }
                 )}
 
-                {/* ACCESORIOS */}
+                {/* ==================================================
+                    ACCESORIOS
+                ================================================== */}
 
                 <section className="mb-8 border-b border-gray-100 pb-8">
 
@@ -1537,6 +1493,7 @@ export default function ChecklistPage() {
                           );
 
                         return (
+
                           <label
                             key={
                               accesorio
@@ -1568,10 +1525,13 @@ export default function ChecklistPage() {
                             />
 
                             <span className="text-sm font-semibold text-gray-800">
-                              {accesorio}
+                              {
+                                accesorio
+                              }
                             </span>
 
                           </label>
+
                         );
                       }
                     )}
@@ -1580,21 +1540,27 @@ export default function ChecklistPage() {
 
                   {accesorios.length >
                     0 && (
+
                     <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
 
                       <p className="text-xs font-semibold text-green-700">
                         Accesorios registrados:{" "}
-                        {accesorios.join(
-                          ", "
-                        )}
+                        {
+                          accesorios.join(
+                            ", "
+                          )
+                        }
                       </p>
 
                     </div>
+
                   )}
 
                 </section>
 
-                {/* OBSERVACIONES */}
+                {/* ==================================================
+                    OBSERVACIONES
+                ================================================== */}
 
                 <section>
 
@@ -1636,7 +1602,9 @@ export default function ChecklistPage() {
 
                 </section>
 
-                {/* RESUMEN */}
+                {/* ==================================================
+                    RESUMEN
+                ================================================== */}
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-3">
 
@@ -1686,9 +1654,12 @@ export default function ChecklistPage() {
 
                 </div>
 
-                {/* MENSAJE */}
+                {/* ==================================================
+                    MENSAJE
+                ================================================== */}
 
                 {mensaje && (
+
                   <div
                     className={`mt-6 rounded-xl border px-4 py-3 text-sm font-semibold ${
                       mensaje.includes(
@@ -1700,9 +1671,12 @@ export default function ChecklistPage() {
                   >
                     {mensaje}
                   </div>
+
                 )}
 
-                {/* BOTONES */}
+                {/* ==================================================
+                    BOTONES
+                ================================================== */}
 
                 <div className="mt-8 flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:justify-end">
 
@@ -1719,6 +1693,7 @@ export default function ChecklistPage() {
                   </button>
 
                   {!bloqueado && (
+
                     <button
                       type="button"
                       onClick={
@@ -1733,16 +1708,22 @@ export default function ChecklistPage() {
                         ? "Guardando..."
                         : "Guardar y cerrar checklist"}
                     </button>
+
                   )}
 
                 </div>
 
               </>
+
             )}
 
           </div>
 
         </div>
+
+        {/* ==================================================
+            PIE
+        ================================================== */}
 
         <div className="py-8 text-center">
 
@@ -1753,7 +1734,7 @@ export default function ChecklistPage() {
         </div>
 
       </div>
+
     </main>
   );
 }
-
