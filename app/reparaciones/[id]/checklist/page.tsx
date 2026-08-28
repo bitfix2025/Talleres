@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
 
@@ -18,6 +19,7 @@ type ItemChecklist = {
 
 type FotoRecepcion = {
   id: number;
+  orden_id: number;
   tipo: string;
   url: string;
 };
@@ -248,167 +250,221 @@ const TIPOS_FOTO = [
   },
 ];
 
+const FOTOS_INICIALES: Record<string, File | null> = {
+  frente: null,
+  trasera: null,
+  lateral_izquierdo: null,
+  lateral_derecho: null,
+  danos: null,
+};
+
 export default function ChecklistPage() {
   const params = useParams();
   const router = useRouter();
 
-  const ordenId = String(params.id);
+  const ordenId = String(params.id ?? "");
   const ordenIdNumero = Number(ordenId);
 
-  const [respuestas, setRespuestas] = useState<Record<string, string>>({});
-  const [accesorios, setAccesorios] = useState<string[]>([]);
-  const [observaciones, setObservaciones] = useState("");
+  const [respuestas, setRespuestas] =
+    useState<Record<string, string>>({});
 
-  const [fotos, setFotos] = useState<Record<string, File | null>>({
-    frente: null,
-    trasera: null,
-    lateral_izquierdo: null,
-    lateral_derecho: null,
-    danos: null,
-  });
+  const [accesorios, setAccesorios] =
+    useState<string[]>([]);
 
-  const [previsualizaciones, setPrevisualizaciones] = useState<
-    Record<string, string>
-  >({});
+  const [observaciones, setObservaciones] =
+    useState("");
 
-  const [fotosGuardadas, setFotosGuardadas] = useState<FotoRecepcion[]>([]);
+  const [fotos, setFotos] =
+    useState<Record<string, File | null>>(
+      FOTOS_INICIALES
+    );
 
-  const [guardando, setGuardando] = useState(false);
-  const [cargando, setCargando] = useState(true);
-  const [mensaje, setMensaje] = useState("");
-  const [bloqueado, setBloqueado] = useState(false);
+  const [previsualizaciones, setPrevisualizaciones] =
+    useState<Record<string, string>>({});
 
-  const cambiarRespuesta = (itemId: string, valor: string) => {
-    if (bloqueado || guardando) return;
+  const [fotosGuardadas, setFotosGuardadas] =
+    useState<FotoRecepcion[]>([]);
 
-    setRespuestas((actual) => ({
-      ...actual,
-      [itemId]: valor,
-    }));
-  };
+  const [guardando, setGuardando] =
+    useState(false);
 
-  const cambiarAccesorio = (accesorio: string) => {
-    if (bloqueado || guardando) return;
+  const [cargando, setCargando] =
+    useState(true);
 
-    setAccesorios((actual) => {
-      if (actual.includes(accesorio)) {
-        return actual.filter((item) => item !== accesorio);
-      }
+  const [mensaje, setMensaje] =
+    useState("");
 
-      return [...actual, accesorio];
-    });
-  };
+  const [bloqueado, setBloqueado] =
+    useState(false);
 
-  const cambiarFoto = (tipo: string, archivo: File | null) => {
-    if (bloqueado || guardando) return;
+  const inputRefs =
+    useRef<Record<string, HTMLInputElement | null>>({});
 
-    if (!archivo) return;
+  /*
+   * ==========================================================
+   * CARGAR FOTOS
+   * ==========================================================
+   *
+   * Esta función es INDEPENDIENTE del checklist.
+   *
+   * Las fotos viven en fotos_recepcion y no deben depender
+   * de que existan filas en checklist_reparacion.
+   */
 
-    if (!archivo.type.startsWith("image/")) {
-      setMensaje("Solo se pueden seleccionar imágenes.");
-      return;
-    }
-
-    const maximoMB = 10;
-
-    if (archivo.size > maximoMB * 1024 * 1024) {
-      setMensaje(
-        `La foto "${tipo}" supera el límite de ${maximoMB} MB.`
+  const cargarFotos = async () => {
+    if (
+      !ordenIdNumero ||
+      Number.isNaN(ordenIdNumero)
+    ) {
+      console.error(
+        "ID DE ORDEN INVÁLIDO:",
+        ordenId
       );
       return;
     }
 
-    const url = URL.createObjectURL(archivo);
+    console.log(
+      "=========================================="
+    );
 
-    setFotos((actual) => ({
-      ...actual,
-      [tipo]: archivo,
-    }));
+    console.log(
+      "CARGANDO FOTOS DE ORDEN:",
+      ordenIdNumero
+    );
 
-    setPrevisualizaciones((actual) => {
-      if (actual[tipo]) {
-        URL.revokeObjectURL(actual[tipo]);
-      }
-
-      return {
-        ...actual,
-        [tipo]: url,
-      };
-    });
-
-    setMensaje("");
-  };
-
-  const eliminarFotoSeleccionada = (tipo: string) => {
-    if (bloqueado || guardando) return;
-
-    if (previsualizaciones[tipo]) {
-      URL.revokeObjectURL(previsualizaciones[tipo]);
-    }
-
-    setFotos((actual) => ({
-      ...actual,
-      [tipo]: null,
-    }));
-
-    setPrevisualizaciones((actual) => {
-      const copia = { ...actual };
-      delete copia[tipo];
-      return copia;
-    });
-  };
-
-  const cargarFotos = async () => {
-    const { data, error } = await supabase
+    const {
+      data,
+      error,
+    } = await supabase
       .from("fotos_recepcion")
-      .select("id, tipo, url")
+      .select("id, orden_id, tipo, url")
       .eq("orden_id", ordenIdNumero)
       .order("id", {
         ascending: true,
       });
 
     if (error) {
-      console.error("ERROR CARGANDO FOTOS DE RECEPCIÓN:", error);
+      console.error(
+        "❌ ERROR SUPABASE CARGANDO FOTOS:",
+        error
+      );
+
+      setFotosGuardadas([]);
+
+      setMensaje(
+        `Error cargando fotos: ${error.message}`
+      );
+
       return;
     }
 
-    setFotosGuardadas((data || []) as FotoRecepcion[]);
+    console.log(
+      "✅ FOTOS DEVUELTAS POR SUPABASE:",
+      data
+    );
+
+    /*
+     * NO filtramos por id.
+     *
+     * Antes teníamos:
+     *
+     * foto.id && foto.tipo && foto.url
+     *
+     * y eso podía descartar registros.
+     */
+
+    const fotosValidas: FotoRecepcion[] =
+      (data ?? []).filter(
+        (foto): foto is FotoRecepcion =>
+          foto !== null &&
+          typeof foto.id === "number" &&
+          typeof foto.orden_id === "number" &&
+          typeof foto.tipo === "string" &&
+          typeof foto.url === "string" &&
+          foto.url.trim().length > 0
+      );
+
+    console.log(
+      "✅ FOTOS VÁLIDAS:",
+      fotosValidas
+    );
+
+    setFotosGuardadas(fotosValidas);
+
+    console.log(
+      "TOTAL FOTOS:",
+      fotosValidas.length
+    );
+
+    console.log(
+      "=========================================="
+    );
   };
+
+  /*
+   * ==========================================================
+   * CARGAR CHECKLIST
+   * ==========================================================
+   */
 
   const cargarChecklist = async () => {
     try {
       setCargando(true);
       setMensaje("");
 
-      if (!ordenIdNumero || Number.isNaN(ordenIdNumero)) {
+      if (
+        !ordenIdNumero ||
+        Number.isNaN(ordenIdNumero)
+      ) {
         setMensaje("ID de orden inválido.");
         return;
       }
 
-      const { data: orden, error: errorOrden } = await supabase
+      /*
+       * --------------------------------------------------------
+       * PRIMERO CARGAMOS LAS FOTOS
+       * --------------------------------------------------------
+       */
+
+      await cargarFotos();
+
+      /*
+       * --------------------------------------------------------
+       * CARGAR ESTADO DE LA ORDEN
+       * --------------------------------------------------------
+       */
+
+      const {
+        data: orden,
+        error: errorOrden,
+      } = await supabase
         .from("ordenes_reparacion")
-        .select("checklist_completado, checklist_fecha")
+        .select(
+          "checklist_completado, checklist_fecha"
+        )
         .eq("id", ordenIdNumero)
         .maybeSingle();
 
       if (errorOrden) {
-        console.error("ERROR CARGANDO ESTADO DE LA ORDEN:", errorOrden);
-
-        setMensaje(
-          `Error cargando orden: ${
-            errorOrden.message || "Error desconocido"
-          }`
+        throw new Error(
+          `Error cargando orden: ${errorOrden.message}`
         );
-
-        return;
       }
 
-      const estaCerrado =
-        orden?.checklist_completado === true;
+      setBloqueado(
+        orden?.checklist_completado === true
+      );
 
-      setBloqueado(estaCerrado);
+      /*
+       * --------------------------------------------------------
+       * CARGAR CHECKLIST
+       * --------------------------------------------------------
+       */
 
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from("checklist_reparacion")
         .select(
           `
@@ -433,176 +489,559 @@ export default function ChecklistPage() {
         });
 
       if (error) {
-        console.error("ERROR CARGANDO CHECKLIST:", error);
-
-        setMensaje(
-          `Error cargando checklist: ${
-            error.message || "Error desconocido"
-          }`
+        throw new Error(
+          `Error cargando checklist: ${error.message}`
         );
-
-        return;
       }
+
+      /*
+       * Limpiar solamente el estado del formulario.
+       *
+       * IMPORTANTE:
+       * NO tocamos fotosGuardadas aquí.
+       */
 
       setRespuestas({});
       setAccesorios([]);
       setObservaciones("");
 
-      await cargarFotos();
-
       if (!data || data.length === 0) {
+        /*
+         * NO hacemos nada con las fotos.
+         *
+         * Ya fueron cargadas arriba.
+         */
+
         return;
       }
 
-      const nuevasRespuestas: Record<string, string> = {};
-      let nuevaObservacion = "";
+      const nuevasRespuestas: Record<
+        string,
+        string
+      > = {};
+
       const accesoriosEncontrados: string[] = [];
 
+      let nuevaObservacion = "";
+
       data.forEach((fila: any) => {
-        if (fila.categoria === "Accesorios") {
+        if (
+          fila.categoria === "Accesorios"
+        ) {
           if (
-            ACCESORIOS.includes(fila.prueba) &&
-            !accesoriosEncontrados.includes(fila.prueba)
+            ACCESORIOS.includes(
+              fila.prueba
+            ) &&
+            !accesoriosEncontrados.includes(
+              fila.prueba
+            )
           ) {
-            accesoriosEncontrados.push(fila.prueba);
+            accesoriosEncontrados.push(
+              fila.prueba
+            );
           }
 
-          if (fila.observacion && !nuevaObservacion) {
-            nuevaObservacion = fila.observacion;
+          if (
+            fila.observacion &&
+            !nuevaObservacion
+          ) {
+            nuevaObservacion =
+              fila.observacion;
           }
 
           return;
         }
 
         const item = ITEMS.find(
-          (item) => item.prueba === fila.prueba
+          (item) =>
+            item.prueba === fila.prueba
         );
 
-        if (item) {
-          const opcion = item.opciones.find(
-            (opcion) => opcion.estado === fila.estado
+        if (!item) return;
+
+        const opcion =
+          item.opciones.find(
+            (opcion) =>
+              opcion.estado === fila.estado
           );
 
-          if (opcion) {
-            nuevasRespuestas[item.id] = opcion.texto;
-          }
+        if (opcion) {
+          nuevasRespuestas[item.id] =
+            opcion.texto;
         }
 
-        if (fila.observacion && !nuevaObservacion) {
-          nuevaObservacion = fila.observacion;
+        if (
+          fila.observacion &&
+          !nuevaObservacion
+        ) {
+          nuevaObservacion =
+            fila.observacion;
         }
       });
 
-      setRespuestas(nuevasRespuestas);
-      setAccesorios(accesoriosEncontrados);
-      setObservaciones(nuevaObservacion);
+      setRespuestas(
+        nuevasRespuestas
+      );
+
+      setAccesorios(
+        accesoriosEncontrados
+      );
+
+      setObservaciones(
+        nuevaObservacion
+      );
     } catch (error: any) {
-      console.error("ERROR CARGANDO CHECKLIST:", error);
+      console.error(
+        "❌ ERROR CARGANDO RECEPCIÓN:",
+        error
+      );
 
       setMensaje(
-        `Error cargando checklist: ${
-          error?.message || "Error desconocido"
-        }`
+        error?.message ||
+          "Error cargando la recepción."
       );
     } finally {
       setCargando(false);
     }
   };
 
+  /*
+   * ==========================================================
+   * AL ENTRAR A LA PÁGINA
+   * ==========================================================
+   */
+
   useEffect(() => {
+    if (
+      !ordenIdNumero ||
+      Number.isNaN(ordenIdNumero)
+    ) {
+      setCargando(false);
+      return;
+    }
+
     cargarChecklist();
 
     return () => {
-      Object.values(previsualizaciones).forEach((url) => {
+      Object.values(
+        previsualizaciones
+      ).forEach((url) => {
         URL.revokeObjectURL(url);
       });
     };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordenId]);
 
-  const subirFoto = async (
-    tipo: string,
-    archivo: File
+  /*
+   * ==========================================================
+   * SELECTOR DE FOTOS
+   * ==========================================================
+   */
+
+  const abrirSelectorFoto = (
+    tipo: string
   ) => {
-    const extension =
-      archivo.name.split(".").pop()?.toLowerCase() || "jpg";
-
-    const nombreArchivo =
-      `${ordenIdNumero}_${tipo}_${Date.now()}.${extension}`;
-
-    const ruta =
-      `orden-${ordenIdNumero}/${nombreArchivo}`;
-
-    const { error: errorUpload } = await supabase.storage
-      .from("recepcion-fotos")
-      .upload(ruta, archivo, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: archivo.type,
-      });
-
-    if (errorUpload) {
-      throw new Error(
-        `No se pudo subir la foto de ${tipo}: ${
-          errorUpload.message || "Error desconocido"
-        }`
-      );
+    if (bloqueado || guardando) {
+      return;
     }
 
-    const { data: urlData } = supabase.storage
-      .from("recepcion-fotos")
-      .getPublicUrl(ruta);
+    const input =
+      inputRefs.current[tipo];
 
-    if (!urlData?.publicUrl) {
-      throw new Error(
-        `No se pudo obtener la URL de la foto de ${tipo}.`
-      );
-    }
-
-    const { error: errorRegistro } = await supabase
-      .from("fotos_recepcion")
-      .insert({
-        orden_id: ordenIdNumero,
-        tipo,
-        url: urlData.publicUrl,
-      });
-
-    if (errorRegistro) {
-      throw new Error(
-        `La foto de ${tipo} se subió, pero no pudo registrarse: ${
-          errorRegistro.message || "Error desconocido"
-        }`
-      );
-    }
-
-    return urlData.publicUrl;
-  };
-
-  const guardarChecklist = async () => {
-    if (bloqueado) {
+    if (!input) {
       setMensaje(
-        "Este checklist ya está cerrado y no se puede modificar."
+        "No se pudo abrir el selector de fotos."
       );
       return;
     }
 
-    if (guardando) return;
+    input.click();
+  };
+
+  /*
+   * ==========================================================
+   * CAMBIAR FOTO
+   * ==========================================================
+   */
+
+  const cambiarFoto = (
+    tipo: string,
+    archivo: File | null
+  ) => {
+    if (
+      bloqueado ||
+      guardando ||
+      !archivo
+    ) {
+      return;
+    }
+
+    if (
+      !archivo.type.startsWith("image/")
+    ) {
+      setMensaje(
+        "El archivo seleccionado no es una imagen."
+      );
+      return;
+    }
+
+    if (
+      archivo.size >
+      10 * 1024 * 1024
+    ) {
+      setMensaje(
+        `La foto "${tipo}" supera el límite de 10 MB.`
+      );
+      return;
+    }
+
+    const url =
+      URL.createObjectURL(archivo);
+
+    setFotos((actual) => ({
+      ...actual,
+      [tipo]: archivo,
+    }));
+
+    setPrevisualizaciones(
+      (actual) => {
+        if (actual[tipo]) {
+          URL.revokeObjectURL(
+            actual[tipo]
+          );
+        }
+
+        return {
+          ...actual,
+          [tipo]: url,
+        };
+      }
+    );
+
+    setMensaje("");
+  };
+
+  /*
+   * ==========================================================
+   * ELIMINAR FOTO NUEVA
+   * ==========================================================
+   */
+
+  const eliminarFotoSeleccionada = (
+    tipo: string
+  ) => {
+    if (
+      bloqueado ||
+      guardando
+    ) {
+      return;
+    }
+
+    if (
+      previsualizaciones[tipo]
+    ) {
+      URL.revokeObjectURL(
+        previsualizaciones[tipo]
+      );
+    }
+
+    setFotos((actual) => ({
+      ...actual,
+      [tipo]: null,
+    }));
+
+    setPrevisualizaciones(
+      (actual) => {
+        const copia = {
+          ...actual,
+        };
+
+        delete copia[tipo];
+
+        return copia;
+      }
+    );
+  };
+
+  /*
+   * ==========================================================
+   * RESPUESTAS
+   * ==========================================================
+   */
+
+  const cambiarRespuesta = (
+    itemId: string,
+    valor: string
+  ) => {
+    if (
+      bloqueado ||
+      guardando
+    ) {
+      return;
+    }
+
+    setRespuestas((actual) => ({
+      ...actual,
+      [itemId]: valor,
+    }));
+  };
+
+  /*
+   * ==========================================================
+   * ACCESORIOS
+   * ==========================================================
+   */
+
+  const cambiarAccesorio = (
+    accesorio: string
+  ) => {
+    if (
+      bloqueado ||
+      guardando
+    ) {
+      return;
+    }
+
+    setAccesorios((actual) => {
+      if (
+        actual.includes(accesorio)
+      ) {
+        return actual.filter(
+          (item) =>
+            item !== accesorio
+        );
+      }
+
+      return [
+        ...actual,
+        accesorio,
+      ];
+    });
+  };
+
+  /*
+   * ==========================================================
+   * SUBIR FOTO
+   * ==========================================================
+   */
+
+  const subirFoto = async (
+    tipo: string,
+    archivo: File
+  ): Promise<FotoRecepcion> => {
+    const extension =
+      archivo.name
+        .split(".")
+        .pop()
+        ?.toLowerCase() ||
+      "jpg";
+
+    /*
+     * Usamos un nombre único.
+     */
+
+    const nombreArchivo =
+      `${ordenIdNumero}_${tipo}_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 8)}.${extension}`;
+
+    const ruta =
+      `orden-${ordenIdNumero}/${nombreArchivo}`;
+
+    console.log(
+      "📤 SUBIENDO FOTO:",
+      ruta
+    );
+
+    /*
+     * --------------------------------------------------------
+     * STORAGE
+     * --------------------------------------------------------
+     */
+
+    const {
+      error: errorUpload,
+    } = await supabase.storage
+      .from("recepcion-fotos")
+      .upload(
+        ruta,
+        archivo,
+        {
+          cacheControl: "3600",
+          upsert: false,
+          contentType:
+            archivo.type ||
+            "image/jpeg",
+        }
+      );
+
+    if (errorUpload) {
+      throw new Error(
+        `No se pudo subir ${tipo}: ${errorUpload.message}`
+      );
+    }
+
+    /*
+     * --------------------------------------------------------
+     * URL PÚBLICA
+     * --------------------------------------------------------
+     */
+
+    const {
+      data: urlData,
+    } =
+      supabase.storage
+        .from("recepcion-fotos")
+        .getPublicUrl(ruta);
+
+    const publicUrl =
+      urlData?.publicUrl;
+
+    if (!publicUrl) {
+      throw new Error(
+        `No se pudo obtener la URL de ${tipo}.`
+      );
+    }
+
+    console.log(
+      "🔗 URL GENERADA:",
+      publicUrl
+    );
+
+    /*
+     * --------------------------------------------------------
+     * GUARDAR REGISTRO EN fotos_recepcion
+     * --------------------------------------------------------
+     */
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("fotos_recepcion")
+      .insert({
+        orden_id:
+          ordenIdNumero,
+        tipo,
+        url: publicUrl,
+      })
+      .select(
+        "id, orden_id, tipo, url"
+      )
+      .single();
+
+    if (error) {
+      throw new Error(
+        `La foto se subió a Storage pero NO se pudo guardar en fotos_recepcion: ${error.message}`
+      );
+    }
+
+    if (!data) {
+      throw new Error(
+        `La foto de ${tipo} no devolvió registro.`
+      );
+    }
+
+    console.log(
+      "✅ REGISTRO GUARDADO EN BD:",
+      data
+    );
+
+    return data as FotoRecepcion;
+  };
+
+  /*
+   * ==========================================================
+   * GUARDAR CHECKLIST
+   * ==========================================================
+   */
+
+  const guardarChecklist = async () => {
+    if (bloqueado) {
+      setMensaje(
+        "Este checklist ya está cerrado."
+      );
+      return;
+    }
+
+    if (guardando) {
+      return;
+    }
 
     try {
       setGuardando(true);
       setMensaje("");
 
-      if (!ordenIdNumero || Number.isNaN(ordenIdNumero)) {
-        setMensaje("ID de orden inválido.");
+      /*
+       * --------------------------------------------------------
+       * VERIFICAR ORDEN
+       * --------------------------------------------------------
+       */
+
+      const {
+        data: ordenActual,
+        error: errorOrden,
+      } = await supabase
+        .from("ordenes_reparacion")
+        .select(
+          "checklist_completado"
+        )
+        .eq(
+          "id",
+          ordenIdNumero
+        )
+        .maybeSingle();
+
+      if (errorOrden) {
+        throw new Error(
+          `No se pudo verificar la orden: ${errorOrden.message}`
+        );
+      }
+
+      if (
+        ordenActual?.checklist_completado ===
+        true
+      ) {
+        setBloqueado(true);
+
+        /*
+         * Aunque esté cerrado,
+         * volvemos a consultar las fotos.
+         */
+
+        await cargarFotos();
+
+        setMensaje(
+          "Este checklist ya fue cerrado."
+        );
+
         return;
       }
 
-      const seleccionados = ITEMS.filter(
-        (item) => respuestas[item.id]
-      );
+      /*
+       * --------------------------------------------------------
+       * FOTOS SELECCIONADAS
+       * --------------------------------------------------------
+       */
 
-      const fotosSeleccionadas = Object.entries(fotos).filter(
-        ([, archivo]) => archivo !== null
-      );
+      const fotosSeleccionadas =
+        Object.entries(fotos).filter(
+          ([, archivo]) =>
+            archivo !== null
+        );
+
+      /*
+       * --------------------------------------------------------
+       * CHECKLIST SELECCIONADO
+       * --------------------------------------------------------
+       */
+
+      const seleccionados =
+        ITEMS.filter(
+          (item) =>
+            respuestas[item.id]
+        );
 
       if (
         seleccionados.length === 0 &&
@@ -611,349 +1050,314 @@ export default function ChecklistPage() {
         fotosSeleccionadas.length === 0
       ) {
         setMensaje(
-          "Seleccioná al menos una prueba, accesorio, foto u observación antes de guardar."
+          "Seleccioná al menos una prueba, accesorio, foto u observación."
         );
-        return;
-      }
-
-      const {
-        data: ordenSeguridad,
-        error: errorOrdenSeguridad,
-      } = await supabase
-        .from("ordenes_reparacion")
-        .select("checklist_completado")
-        .eq("id", ordenIdNumero)
-        .maybeSingle();
-
-      if (errorOrdenSeguridad) {
-        console.error(
-          "ERROR VERIFICANDO ORDEN:",
-          errorOrdenSeguridad
-        );
-
-        setMensaje(
-          `No se pudo verificar la orden: ${
-            errorOrdenSeguridad.message ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
-      }
-
-      if (
-        ordenSeguridad?.checklist_completado === true
-      ) {
-        setBloqueado(true);
-
-        setMensaje(
-          "Este checklist ya fue cerrado y no puede modificarse."
-        );
-
         return;
       }
 
       /*
-       * ==================================================
-       * PASO 1
+       * --------------------------------------------------------
        * SUBIR FOTOS
-       * ==================================================
+       * --------------------------------------------------------
        */
 
-      for (const [tipo, archivo] of fotosSeleccionadas) {
-        if (archivo) {
-          await subirFoto(tipo, archivo);
+      const fotosNuevas: FotoRecepcion[] =
+        [];
+
+      for (
+        const [tipo, archivo] of
+          fotosSeleccionadas
+      ) {
+        if (!archivo) {
+          continue;
         }
-      }
 
-      /*
-       * ==================================================
-       * PASO 2
-       * ELIMINAR CHECKLIST ANTERIOR
-       * ==================================================
-       */
-
-      const { error: errorDelete } = await supabase
-        .from("checklist_reparacion")
-        .delete()
-        .eq("orden_id", ordenIdNumero)
-        .eq("momento", "ENTRADA");
-
-      if (errorDelete) {
-        console.error(
-          "ERROR ELIMINANDO CHECKLIST ANTERIOR:",
-          JSON.stringify(errorDelete, null, 2)
-        );
-
-        setMensaje(
-          `No se pudo preparar el checklist: ${
-            errorDelete.message ||
-            errorDelete.details ||
-            errorDelete.hint ||
-            errorDelete.code ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
-      }
-
-      /*
-       * ==================================================
-       * PASO 3
-       * CREAR FILAS DE PRUEBAS
-       * ==================================================
-       */
-
-      const filas = seleccionados.map(
-        (item, index) => {
-          const opcion = item.opciones.find(
-            (opcion) =>
-              opcion.texto === respuestas[item.id]
+        const foto =
+          await subirFoto(
+            tipo,
+            archivo
           );
 
-          return {
-            orden_id: ordenIdNumero,
-            momento: "ENTRADA",
-            categoria: item.categoria,
-            prueba: item.prueba,
-            estado:
-              opcion?.estado || "NO_PROBADO",
-            observacion:
-              observaciones.trim() || null,
-            orden_prueba: index + 1,
-          };
-        }
-      );
+        fotosNuevas.push(
+          foto
+        );
+      }
 
       /*
-       * ==================================================
-       * PASO 4
-       * CREAR FILAS DE ACCESORIOS
-       * ==================================================
+       * --------------------------------------------------------
+       * ACTUALIZAR LISTA LOCAL
+       * --------------------------------------------------------
        */
 
-      const filasAccesorios = accesorios.map(
-        (accesorio, index) => ({
-          orden_id: ordenIdNumero,
-          momento: "ENTRADA",
-          categoria: "Accesorios",
-          prueba: accesorio,
-          estado: "FUNCIONA",
-          observacion:
-            observaciones.trim() || null,
-          orden_prueba:
-            filas.length + index + 1,
-        })
-      );
+      if (
+        fotosNuevas.length > 0
+      ) {
+        setFotosGuardadas(
+          (actuales) => [
+            ...actuales,
+            ...fotosNuevas,
+          ]
+        );
+      }
+
+      /*
+       * --------------------------------------------------------
+       * BORRAR CHECKLIST ANTERIOR
+       *
+       * IMPORTANTE:
+       *
+       * SOLO BORRAMOS:
+       * checklist_reparacion
+       *
+       * NUNCA:
+       * fotos_recepcion
+       * Storage
+       * --------------------------------------------------------
+       */
+
+      const {
+        error: errorDelete,
+      } = await supabase
+        .from(
+          "checklist_reparacion"
+        )
+        .delete()
+        .eq(
+          "orden_id",
+          ordenIdNumero
+        )
+        .eq(
+          "momento",
+          "ENTRADA"
+        );
+
+      if (errorDelete) {
+        throw new Error(
+          `No se pudo preparar el checklist: ${errorDelete.message}`
+        );
+      }
+
+      /*
+       * --------------------------------------------------------
+       * FILAS DE PRUEBAS
+       * --------------------------------------------------------
+       */
+
+      const filas =
+        seleccionados.map(
+          (item, index) => {
+            const opcion =
+              item.opciones.find(
+                (op) =>
+                  op.texto ===
+                  respuestas[
+                    item.id
+                  ]
+              );
+
+            return {
+              orden_id:
+                ordenIdNumero,
+              momento:
+                "ENTRADA",
+              categoria:
+                item.categoria,
+              prueba:
+                item.prueba,
+              estado:
+                opcion?.estado ||
+                "NO_PROBADO",
+              observacion:
+                observaciones.trim() ||
+                null,
+              orden_prueba:
+                index + 1,
+            };
+          }
+        );
+
+      /*
+       * --------------------------------------------------------
+       * ACCESORIOS
+       * --------------------------------------------------------
+       */
+
+      const filasAccesorios =
+        accesorios.map(
+          (
+            accesorio,
+            index
+          ) => ({
+            orden_id:
+              ordenIdNumero,
+            momento:
+              "ENTRADA",
+            categoria:
+              "Accesorios",
+            prueba:
+              accesorio,
+            estado:
+              "FUNCIONA",
+            observacion:
+              observaciones.trim() ||
+              null,
+            orden_prueba:
+              filas.length +
+              index +
+              1,
+          })
+        );
 
       const filasFinales = [
         ...filas,
         ...filasAccesorios,
       ];
 
-      console.log(
-        "FILAS CHECKLIST A INSERTAR:",
-        JSON.stringify(filasFinales, null, 2)
-      );
-
       /*
-       * ==================================================
-       * PASO 5
+       * --------------------------------------------------------
        * INSERTAR CHECKLIST
-       * ==================================================
+       * --------------------------------------------------------
        */
 
-      if (filasFinales.length > 0) {
+      if (
+        filasFinales.length > 0
+      ) {
         const {
-          data: datosInsertados,
           error: errorInsert,
         } = await supabase
-          .from("checklist_reparacion")
-          .insert(filasFinales)
-          .select();
+          .from(
+            "checklist_reparacion"
+          )
+          .insert(
+            filasFinales
+          );
 
         if (errorInsert) {
-          console.error(
-            "ERROR INSERTANDO CHECKLIST:",
-            JSON.stringify(errorInsert, null, 2)
+          throw new Error(
+            `Error guardando checklist: ${errorInsert.message}`
           );
-
-          console.error(
-            "FILAS QUE SE INTENTARON INSERTAR:",
-            JSON.stringify(filasFinales, null, 2)
-          );
-
-          setMensaje(
-            `Error guardando checklist: ${
-              errorInsert.message ||
-              errorInsert.details ||
-              errorInsert.hint ||
-              errorInsert.code ||
-              "Error desconocido"
-            }`
-          );
-
-          return;
         }
-
-        console.log(
-          "CHECKLIST INSERTADO CORRECTAMENTE:",
-          datosInsertados
-        );
       }
 
       /*
-       * ==================================================
-       * PASO 6
-       * CERRAR CHECKLIST
-       * ==================================================
+       * --------------------------------------------------------
+       * CERRAR ORDEN
+       * --------------------------------------------------------
        */
 
-      const fechaCierre =
+      const fecha =
         new Date().toISOString();
 
       const {
-        data: ordenActualizada,
         error: errorCerrar,
       } = await supabase
-        .from("ordenes_reparacion")
-        .update({
-          checklist_completado: true,
-          checklist_fecha: fechaCierre,
-        })
-        .eq("id", ordenIdNumero)
-        .eq("checklist_completado", false)
-        .select(
-          "checklist_completado, checklist_fecha"
+        .from(
+          "ordenes_reparacion"
         )
-        .maybeSingle();
+        .update({
+          checklist_completado:
+            true,
+          checklist_fecha:
+            fecha,
+        })
+        .eq(
+          "id",
+          ordenIdNumero
+        );
 
       if (errorCerrar) {
-        console.error(
-          "ERROR CERRANDO CHECKLIST:",
-          JSON.stringify(errorCerrar, null, 2)
+        throw new Error(
+          `El checklist se guardó pero no se pudo cerrar: ${errorCerrar.message}`
         );
-
-        setMensaje(
-          `El checklist se guardó, pero no se pudo cerrar: ${
-            errorCerrar.message ||
-            errorCerrar.details ||
-            errorCerrar.hint ||
-            errorCerrar.code ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
       }
 
       /*
-       * ==================================================
-       * PASO 7
-       * VERIFICAR CIERRE
-       * ==================================================
-       */
-
-      if (!ordenActualizada) {
-        const {
-          data: ordenVerificada,
-          error: errorVerificacion,
-        } = await supabase
-          .from("ordenes_reparacion")
-          .select(
-            "checklist_completado, checklist_fecha"
-          )
-          .eq("id", ordenIdNumero)
-          .maybeSingle();
-
-        if (errorVerificacion) {
-          console.error(
-            "ERROR VERIFICANDO CIERRE:",
-            JSON.stringify(
-              errorVerificacion,
-              null,
-              2
-            )
-          );
-
-          setMensaje(
-            `El checklist se guardó, pero no se pudo confirmar el cierre: ${
-              errorVerificacion.message ||
-              errorVerificacion.details ||
-              errorVerificacion.hint ||
-              errorVerificacion.code ||
-              "Error desconocido"
-            }`
-          );
-
-          return;
-        }
-
-        if (
-          ordenVerificada?.checklist_completado !== true
-        ) {
-          setMensaje(
-            "El checklist se guardó, pero la orden no pudo cerrarse."
-          );
-
-          return;
-        }
-      }
-
-      /*
-       * ==================================================
-       * PASO 8
-       * RECARGAR FOTOS
-       * ==================================================
+       * --------------------------------------------------------
+       * VOLVER A CONSULTAR LAS FOTOS
+       * --------------------------------------------------------
        */
 
       await cargarFotos();
 
       /*
-       * ==================================================
-       * PASO 9
-       * BLOQUEAR INTERFAZ
-       * ==================================================
+       * --------------------------------------------------------
+       * BLOQUEAR
+       * --------------------------------------------------------
        */
 
       setBloqueado(true);
 
+      /*
+       * --------------------------------------------------------
+       * LIMPIAR ARCHIVOS LOCALES
+       * --------------------------------------------------------
+       */
+
+      Object.values(
+        previsualizaciones
+      ).forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+
+      setFotos(
+        FOTOS_INICIALES
+      );
+
+      setPrevisualizaciones({});
+
       setMensaje(
         "Checklist guardado y cerrado correctamente."
       );
-
-      await cargarChecklist();
-
     } catch (error: any) {
       console.error(
-        "ERROR GUARDANDO CHECKLIST:",
+        "❌ ERROR GUARDANDO CHECKLIST:",
         error
       );
 
       setMensaje(
-        `Error guardando: ${
-          error?.message ||
-          "Error desconocido"
-        }`
+        error?.message ||
+          "Error guardando la recepción."
       );
 
+      /*
+       * Si hubo error, intentamos recuperar
+       * las fotos directamente desde Supabase.
+       */
+
+      await cargarFotos();
     } finally {
       setGuardando(false);
     }
   };
 
+  /*
+   * ==========================================================
+   * FOTOS POR TIPO
+   * ==========================================================
+   */
+
   const fotosActualesPorTipo = (
     tipo: string
   ) => {
     return fotosGuardadas.filter(
-      (foto) => foto.tipo === tipo
+      (foto) =>
+        foto.tipo === tipo
     );
   };
 
+  const cantidadFotosSeleccionadas =
+    Object.values(fotos).filter(
+      (foto) => foto !== null
+    ).length;
+
+  /*
+   * ==========================================================
+   * PANTALLA
+   * ==========================================================
+   */
+
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-gray-900">
-
       <div className="mx-auto max-w-[1200px] p-5 md:p-8">
 
         <button
@@ -970,12 +1374,13 @@ export default function ChecklistPage() {
 
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
+          {/* HEADER */}
+
           <div className="border-b border-gray-100 p-6 md:p-8">
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
               <div>
-
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400">
                   Orden #{ordenId}
                 </p>
@@ -987,7 +1392,6 @@ export default function ChecklistPage() {
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
                   Comprueba el estado físico y funcional del equipo antes de comenzar la reparación.
                 </p>
-
               </div>
 
               {bloqueado ? (
@@ -1001,39 +1405,312 @@ export default function ChecklistPage() {
               )}
 
             </div>
-
           </div>
 
           <div className="p-6 md:p-8">
 
             {bloqueado && (
               <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-
                 <p className="text-sm font-bold text-amber-800">
                   Checklist de recepción cerrado
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-amber-700">
-                  Este registro representa el estado del equipo al momento de recibirlo. El técnico puede consultarlo, pero no modificarlo.
+                  Este registro representa el estado del equipo al momento de recibirlo.
                 </p>
-
               </div>
             )}
 
             {cargando ? (
               <div className="flex min-h-[300px] items-center justify-center">
-
                 <p className="text-sm font-semibold text-gray-500">
-                  Cargando checklist...
+                  Cargando recepción...
                 </p>
-
               </div>
             ) : (
               <>
+                {/* ==================================================
+                    FOTOGRAFÍAS
+                ================================================== */}
 
-                {/* =====================================================
-                    ESTADO FÍSICO / PRUEBAS / CONECTIVIDAD
-                   ===================================================== */}
+                <section className="mb-10 border-b border-gray-100 pb-10">
+
+                  <div className="mb-5">
+                    <h2 className="text-xl font-bold text-gray-950">
+                      Fotografías de recepción
+                    </h2>
+
+                    <p className="mt-1 text-xs text-gray-400">
+                      Las fotografías quedan guardadas en la orden y se cargarán nuevamente cuando vuelvas a entrar.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+                    {TIPOS_FOTO.map(
+                      (tipo) => {
+
+                        const fotoSeleccionada =
+                          fotos[
+                            tipo.id
+                          ];
+
+                        const preview =
+                          previsualizaciones[
+                            tipo.id
+                          ];
+
+                        const fotosExistentes =
+                          fotosActualesPorTipo(
+                            tipo.id
+                          );
+
+                        return (
+                          <div
+                            key={
+                              tipo.id
+                            }
+                            className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50"
+                          >
+
+                            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+
+                              <div className="flex items-center gap-2">
+
+                                <span className="text-lg">
+                                  {
+                                    tipo.icono
+                                  }
+                                </span>
+
+                                <span className="text-sm font-bold text-gray-900">
+                                  {
+                                    tipo.nombre
+                                  }
+                                </span>
+
+                              </div>
+
+                              {fotosExistentes.length >
+                                0 && (
+                                <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700">
+                                  GUARDADA
+                                </span>
+                              )}
+
+                            </div>
+
+                            {/* FOTO NUEVA */}
+
+                            {preview ? (
+                              <div>
+
+                                <div className="relative aspect-[4/3] bg-gray-100">
+
+                                  <img
+                                    src={
+                                      preview
+                                    }
+                                    alt={
+                                      tipo.nombre
+                                    }
+                                    className="h-full w-full object-cover"
+                                  />
+
+                                  {!bloqueado && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        eliminarFotoSeleccionada(
+                                          tipo.id
+                                        )
+                                      }
+                                      className="absolute right-3 top-3 rounded-full bg-black/75 px-3 py-2 text-xs font-bold text-white hover:bg-black"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  )}
+
+                                </div>
+
+                                {!bloqueado && (
+                                  <div className="border-t border-gray-200 bg-white p-3">
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        abrirSelectorFoto(
+                                          tipo.id
+                                        )
+                                      }
+                                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-100"
+                                    >
+                                      Cambiar foto
+                                    </button>
+
+                                  </div>
+                                )}
+
+                              </div>
+
+                            ) : fotosExistentes.length >
+                              0 ? (
+
+                              /*
+                               * ==================================================
+                               * FOTOS GUARDADAS
+                               * ==================================================
+                               */
+
+                              <div className="space-y-3 p-3">
+
+                                {fotosExistentes.map(
+                                  (foto) => {
+
+                                    /*
+                                     * Agregamos un parámetro de caché.
+                                     *
+                                     * Esto evita que el navegador intente
+                                     * mostrar una versión vieja de la imagen.
+                                     */
+
+                                    const urlFoto =
+                                      `${foto.url}${foto.url.includes("?") ? "&" : "?"}v=${foto.id}`;
+
+                                    return (
+                                      <div
+                                        key={
+                                          foto.id
+                                        }
+                                        className="overflow-hidden rounded-xl border border-gray-200 bg-white"
+                                      >
+
+                                        <img
+                                          src={
+                                            urlFoto
+                                          }
+                                          alt={`Foto ${tipo.nombre}`}
+                                          className="aspect-[4/3] w-full object-cover"
+                                          loading="lazy"
+                                          onLoad={() =>
+                                            console.log(
+                                              "✅ FOTO MOSTRADA:",
+                                              foto.url
+                                            )
+                                          }
+                                          onError={() =>
+                                            console.error(
+                                              "❌ ERROR MOSTRANDO FOTO:",
+                                              foto.url
+                                            )
+                                          }
+                                        />
+
+                                      </div>
+                                    );
+                                  }
+                                )}
+
+                              </div>
+
+                            ) : (
+
+                              /*
+                               * ==================================================
+                               * SIN FOTO
+                               * ==================================================
+                               */
+
+                              <div className="p-4">
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    abrirSelectorFoto(
+                                      tipo.id
+                                    )
+                                  }
+                                  disabled={
+                                    bloqueado ||
+                                    guardando
+                                  }
+                                  className={`flex aspect-[4/3] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white ${
+                                    bloqueado ||
+                                    guardando
+                                      ? "cursor-not-allowed opacity-50"
+                                      : "cursor-pointer hover:border-gray-500 hover:bg-gray-50"
+                                  }`}
+                                >
+
+                                  <span className="text-4xl">
+                                    📷
+                                  </span>
+
+                                  <span className="mt-3 text-sm font-bold text-gray-800">
+                                    Agregar foto
+                                  </span>
+
+                                  <span className="mt-1 text-xs text-gray-400">
+                                    Tomar o seleccionar
+                                  </span>
+
+                                </button>
+
+                              </div>
+                            )}
+
+                            <input
+                              ref={(element) => {
+                                inputRefs.current[
+                                  tipo.id
+                                ] = element;
+                              }}
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              disabled={
+                                bloqueado ||
+                                guardando
+                              }
+                              onChange={(e) => {
+                                const archivo =
+                                  e.target.files?.[0] ||
+                                  null;
+
+                                cambiarFoto(
+                                  tipo.id,
+                                  archivo
+                                );
+
+                                e.target.value =
+                                  "";
+                              }}
+                            />
+
+                          </div>
+                        );
+                      }
+                    )}
+
+                  </div>
+
+                  {!bloqueado && (
+                    <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                      <p className="text-xs leading-5 text-blue-700">
+                        <strong>
+                          Recomendación:
+                        </strong>{" "}
+                        fotografiá el equipo desde todos los ángulos y documentá cualquier daño visible.
+                      </p>
+                    </div>
+                  )}
+
+                </section>
+
+                {/* ==================================================
+                    CHECKLIST
+                ================================================== */}
 
                 {CATEGORIAS.map(
                   (categoria) => {
@@ -1047,21 +1724,19 @@ export default function ChecklistPage() {
 
                     return (
                       <section
-                        key={categoria}
+                        key={
+                          categoria
+                        }
                         className="mb-8 border-b border-gray-100 pb-8"
                       >
 
                         <div className="mb-5">
 
                           <h2 className="text-xl font-bold text-gray-950">
-                            {categoria}
+                            {
+                              categoria
+                            }
                           </h2>
-
-                          <p className="mt-1 text-xs text-gray-400">
-                            {bloqueado
-                              ? "Estado registrado al recibir el equipo."
-                              : "Registra el estado del equipo."}
-                          </p>
 
                         </div>
 
@@ -1069,56 +1744,48 @@ export default function ChecklistPage() {
 
                           {items.map(
                             (item) => (
-
                               <div
-                                key={item.id}
-                                className={`rounded-xl border p-4 transition ${
-                                  bloqueado
-                                    ? "border-gray-200 bg-gray-50"
-                                    : "border-gray-200 hover:border-gray-300"
-                                }`}
+                                key={
+                                  item.id
+                                }
+                                className="rounded-xl border border-gray-200 p-4"
                               >
 
                                 <label className="block text-sm font-bold text-gray-900">
-                                  {item.prueba}
+                                  {
+                                    item.prueba
+                                  }
                                 </label>
 
                                 <select
                                   value={
                                     respuestas[
                                       item.id
-                                    ] || ""
+                                    ] ||
+                                    ""
                                   }
                                   disabled={
                                     bloqueado ||
                                     guardando
                                   }
-                                  onChange={(
-                                    e
-                                  ) =>
+                                  onChange={(e) =>
                                     cambiarRespuesta(
                                       item.id,
-                                      e.target.value
+                                      e.target
+                                        .value
                                     )
                                   }
-                                  className={`mt-3 h-11 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none transition ${
-                                    bloqueado
-                                      ? "cursor-not-allowed bg-gray-100 text-gray-600"
-                                      : "bg-gray-50 focus:border-black focus:bg-white"
-                                  }`}
+                                  className="mt-3 h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm"
                                 >
 
                                   <option value="">
-                                    {bloqueado
-                                      ? "Sin registro"
-                                      : "Seleccionar"}
+                                    Seleccionar
                                   </option>
 
                                   {item.opciones.map(
                                     (
                                       opcion
                                     ) => (
-
                                       <option
                                         key={
                                           opcion.texto
@@ -1131,14 +1798,12 @@ export default function ChecklistPage() {
                                           opcion.texto
                                         }
                                       </option>
-
                                     )
                                   )}
 
                                 </select>
 
                               </div>
-
                             )
                           )}
 
@@ -1149,27 +1814,21 @@ export default function ChecklistPage() {
                   }
                 )}
 
-                {/* =====================================================
+                {/* ==================================================
                     ACCESORIOS
-                   ===================================================== */}
+                ================================================== */}
 
                 <section className="mb-8 border-b border-gray-100 pb-8">
 
-                  <div className="mb-5">
+                  <h2 className="text-xl font-bold text-gray-950">
+                    Accesorios recibidos
+                  </h2>
 
-                    <h2 className="text-xl font-bold text-gray-950">
-                      Accesorios recibidos
-                    </h2>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Marca los accesorios que quedaron en el taller.
+                  </p>
 
-                    <p className="mt-1 text-xs text-gray-400">
-                      {bloqueado
-                        ? "Accesorios registrados al recibir el equipo."
-                        : "Marca los accesorios que quedaron en el taller."}
-                    </p>
-
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
                     {ACCESORIOS.map(
                       (accesorio) => {
@@ -1180,17 +1839,14 @@ export default function ChecklistPage() {
                           );
 
                         return (
-
                           <label
                             key={
                               accesorio
                             }
-                            className={`flex items-center gap-3 rounded-xl border p-4 transition ${
-                              bloqueado
-                                ? "cursor-not-allowed border-gray-200 bg-gray-50"
-                                : seleccionado
-                                ? "cursor-pointer border-black bg-gray-50"
-                                : "cursor-pointer border-gray-200 hover:bg-gray-50"
+                            className={`flex items-center gap-3 rounded-xl border p-4 ${
+                              seleccionado
+                                ? "border-black bg-gray-50"
+                                : "border-gray-200"
                             }`}
                           >
 
@@ -1212,49 +1868,33 @@ export default function ChecklistPage() {
                             />
 
                             <span className="text-sm font-semibold text-gray-800">
-                              {accesorio}
+                              {
+                                accesorio
+                              }
                             </span>
 
                           </label>
-
                         );
                       }
                     )}
 
                   </div>
 
-                  {accesorios.length > 0 && (
-                    <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-
-                      <p className="text-xs font-semibold text-green-700">
-                        Accesorios registrados:{" "}
-                        {accesorios.join(", ")}
-                      </p>
-
-                    </div>
-                  )}
-
                 </section>
 
-                {/* =====================================================
+                {/* ==================================================
                     OBSERVACIONES
-                   ===================================================== */}
+                ================================================== */}
 
-                <section className="mb-8 border-b border-gray-100 pb-8">
+                <section>
 
-                  <div className="mb-5">
+                  <h2 className="text-xl font-bold text-gray-950">
+                    Observaciones
+                  </h2>
 
-                    <h2 className="text-xl font-bold text-gray-950">
-                      Observaciones
-                    </h2>
-
-                    <p className="mt-1 text-xs text-gray-400">
-                      {bloqueado
-                        ? "Observaciones registradas al recibir el equipo."
-                        : "Registra cualquier detalle adicional del equipo."}
-                    </p>
-
-                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Registra cualquier detalle adicional.
+                  </p>
 
                   <textarea
                     value={
@@ -1271,328 +1911,73 @@ export default function ChecklistPage() {
                     }
                     rows={6}
                     placeholder="Ej.: Equipo recibido con golpes en el marco..."
-                    className={`w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition ${
-                      bloqueado
-                        ? "cursor-not-allowed bg-gray-100 text-gray-600"
-                        : "bg-gray-50 focus:border-black focus:bg-white"
-                    }`}
+                    className="mt-5 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm"
                   />
 
                 </section>
 
-                {/* =====================================================
-                    FOTOS DE RECEPCIÓN - AL FINAL
-                   ===================================================== */}
-
-                <section className="mb-8 border-b border-gray-100 pb-8">
-
-                  <div className="mb-5">
-
-                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-
-                      <div>
-
-                        <h2 className="text-xl font-bold text-gray-950">
-                          Fotografías de recepción
-                        </h2>
-
-                        <p className="mt-1 text-xs text-gray-400">
-                          {bloqueado
-                            ? "Fotos registradas al momento de recibir el equipo."
-                            : "Documenta el estado físico del equipo antes de comenzar la reparación."}
-                        </p>
-
-                      </div>
-
-                      {!bloqueado && (
-                        <span className="text-xs font-semibold text-gray-400">
-                          Máximo 10 MB por foto
-                        </span>
-                      )}
-
-                    </div>
-
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-
-                    {TIPOS_FOTO.map(
-                      (tipo) => {
-
-                        const fotoSeleccionada =
-                          fotos[tipo.id];
-
-                        const preview =
-                          previsualizaciones[
-                            tipo.id
-                          ];
-
-                        const fotosExistentes =
-                          fotosActualesPorTipo(
-                            tipo.id
-                          );
-
-                        return (
-                          <div
-                            key={tipo.id}
-                            className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50"
-                          >
-
-                            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
-
-                              <div className="flex items-center gap-2">
-
-                                <span className="text-lg">
-                                  {tipo.icono}
-                                </span>
-
-                                <span className="text-sm font-bold text-gray-900">
-                                  {tipo.nombre}
-                                </span>
-
-                              </div>
-
-                              {fotosExistentes.length > 0 && (
-                                <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700">
-                                  GUARDADA
-                                </span>
-                              )}
-
-                            </div>
-
-                            {preview ? (
-                              <div className="relative aspect-[4/3] bg-gray-100">
-
-                                <img
-                                  src={preview}
-                                  alt={`Vista previa ${tipo.nombre}`}
-                                  className="h-full w-full object-cover"
-                                />
-
-                                {!bloqueado && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      eliminarFotoSeleccionada(
-                                        tipo.id
-                                      )
-                                    }
-                                    className="absolute right-3 top-3 rounded-full bg-black/75 px-3 py-2 text-xs font-bold text-white transition hover:bg-black"
-                                  >
-                                    Eliminar
-                                  </button>
-                                )}
-
-                              </div>
-                            ) : fotosExistentes.length > 0 ? (
-                              <div className="space-y-2 p-3">
-
-                                {fotosExistentes.map(
-                                  (foto) => (
-                                    <div
-                                      key={
-                                        foto.id
-                                      }
-                                      className="overflow-hidden rounded-xl border border-gray-200 bg-white"
-                                    >
-
-                                      <img
-                                        src={
-                                          foto.url
-                                        }
-                                        alt={`Foto ${tipo.nombre}`}
-                                        className="aspect-[4/3] w-full object-cover"
-                                      />
-
-                                    </div>
-                                  )
-                                )}
-
-                              </div>
-                            ) : (
-                              <div className="flex aspect-[4/3] items-center justify-center p-5">
-
-                                <label
-                                  className={`flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white transition ${
-                                    bloqueado
-                                      ? "cursor-not-allowed opacity-60"
-                                      : "hover:border-gray-500 hover:bg-gray-50"
-                                  }`}
-                                >
-
-                                  <span className="text-3xl">
-                                    📷
-                                  </span>
-
-                                  <span className="mt-3 text-sm font-bold text-gray-800">
-                                    Agregar foto
-                                  </span>
-
-                                  <span className="mt-1 text-xs text-gray-400">
-                                    Tomar o seleccionar
-                                  </span>
-
-                                  {!bloqueado && (
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      capture="environment"
-                                      className="hidden"
-                                      disabled={
-                                        guardando
-                                      }
-                                      onChange={(
-                                        e
-                                      ) => {
-                                        const archivo =
-                                          e.target.files?.[0] ||
-                                          null;
-
-                                        cambiarFoto(
-                                          tipo.id,
-                                          archivo
-                                        );
-
-                                        e.target.value =
-                                          "";
-                                      }}
-                                    />
-                                  )}
-
-                                </label>
-
-                              </div>
-                            )}
-
-                            {preview && !bloqueado && (
-                              <div className="border-t border-gray-200 bg-white p-3">
-
-                                <label className="flex cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700 transition hover:bg-gray-100">
-
-                                  Cambiar foto
-
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    className="hidden"
-                                    disabled={
-                                      guardando
-                                    }
-                                    onChange={(
-                                      e
-                                    ) => {
-                                      const archivo =
-                                        e.target.files?.[0] ||
-                                        null;
-
-                                      cambiarFoto(
-                                        tipo.id,
-                                        archivo
-                                      );
-
-                                      e.target.value =
-                                        "";
-                                    }}
-                                  />
-
-                                </label>
-
-                              </div>
-                            )}
-
-                          </div>
-                        );
-                      }
-                    )}
-
-                  </div>
-
-                  {!bloqueado && (
-                    <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
-
-                      <p className="text-xs leading-5 text-blue-700">
-                        <strong>Recomendación:</strong>{" "}
-                        fotografiá el equipo desde todos los ángulos y documentá cualquier daño visible. Estas imágenes quedarán asociadas permanentemente a la orden de recepción.
-                      </p>
-
-                    </div>
-                  )}
-
-                </section>
-
-                {/* =====================================================
+                {/* ==================================================
                     RESUMEN
-                   ===================================================== */}
+                ================================================== */}
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-4">
 
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-
                     <p className="text-xs font-semibold text-gray-400">
-                      Pruebas registradas
+                      Pruebas
                     </p>
 
-                    <p className="mt-1 text-2xl font-bold text-gray-950">
+                    <p className="mt-1 text-2xl font-bold">
                       {
                         Object.keys(
                           respuestas
                         ).length
                       }
                     </p>
-
                   </div>
 
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-
                     <p className="text-xs font-semibold text-gray-400">
                       Accesorios
                     </p>
 
-                    <p className="mt-1 text-2xl font-bold text-gray-950">
+                    <p className="mt-1 text-2xl font-bold">
                       {
                         accesorios.length
                       }
                     </p>
-
                   </div>
 
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-
                     <p className="text-xs font-semibold text-gray-400">
                       Fotografías
                     </p>
 
-                    <p className="mt-1 text-2xl font-bold text-gray-950">
+                    <p className="mt-1 text-2xl font-bold">
                       {
                         fotosGuardadas.length +
-                        fotosSeleccionadasCount(
-                          fotos
-                        )
+                        cantidadFotosSeleccionadas
                       }
                     </p>
-
                   </div>
 
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-
                     <p className="text-xs font-semibold text-gray-400">
                       Estado
                     </p>
 
-                    <p className="mt-1 text-sm font-bold text-gray-950">
+                    <p className="mt-1 text-sm font-bold">
                       {bloqueado
                         ? "CERRADO"
                         : "PENDIENTE"}
                     </p>
-
                   </div>
 
                 </div>
 
-                {/* =====================================================
+                {/* ==================================================
                     MENSAJE
-                   ===================================================== */}
+                ================================================== */}
 
                 {mensaje && (
                   <div
@@ -1604,13 +1989,15 @@ export default function ChecklistPage() {
                         : "border-red-200 bg-red-50 text-red-700"
                     }`}
                   >
-                    {mensaje}
+                    {
+                      mensaje
+                    }
                   </div>
                 )}
 
-                {/* =====================================================
+                {/* ==================================================
                     BOTONES
-                   ===================================================== */}
+                ================================================== */}
 
                 <div className="mt-8 flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:justify-end">
 
@@ -1621,7 +2008,7 @@ export default function ChecklistPage() {
                         `/reparaciones/${ordenId}`
                       )
                     }
-                    className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                    className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                   >
                     Volver a la orden
                   </button>
@@ -1635,7 +2022,7 @@ export default function ChecklistPage() {
                       disabled={
                         guardando
                       }
-                      className="rounded-xl bg-black px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-xl bg-black px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {guardando
                         ? "Guardando recepción..."
@@ -1644,32 +2031,19 @@ export default function ChecklistPage() {
                   )}
 
                 </div>
-
               </>
             )}
 
           </div>
-
         </div>
 
         <div className="py-8 text-center">
-
           <p className="text-[11px] text-gray-400">
             BITFIX TALLER · Recepción de equipos
           </p>
-
         </div>
 
       </div>
-
     </main>
   );
-}
-
-function fotosSeleccionadasCount(
-  fotos: Record<string, File | null>
-) {
-  return Object.values(fotos).filter(
-    (foto) => foto !== null
-  ).length;
 }
