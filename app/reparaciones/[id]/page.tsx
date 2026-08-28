@@ -1006,70 +1006,6 @@ export default function ChecklistPage() {
             ) : (
               <>
 
-                {/* FOTOGRAFÍAS DE RECEPCIÓN */}
-                {fotosGuardadas.length > 0 && (
-                  <section className="mb-10 border-b border-gray-100 pb-10">
-                    <div className="mb-5">
-                      <h2 className="text-xl font-bold text-gray-950">
-                        Fotografías de recepción
-                      </h2>
-                      <p className="mt-1 text-xs text-gray-400">
-                        Fotos registradas al momento de recibir el equipo
-                      </p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {TIPOS_FOTO.map((tipo) => {
-                        const fotosDelTipo = fotosActualesPorTipo(
-                          tipo.id
-                        );
-
-                        if (fotosDelTipo.length === 0) {
-                          return null;
-                        }
-
-                        return (
-                          <div
-                            key={tipo.id}
-                            className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50"
-                          >
-                            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">
-                                  {tipo.icono}
-                                </span>
-                                <span className="text-sm font-bold text-gray-900">
-                                  {tipo.nombre}
-                                </span>
-                              </div>
-                              <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700">
-                                GUARDADA
-                              </span>
-                            </div>
-
-                            <div className="space-y-2 p-3">
-                              {fotosDelTipo.map(
-                                (foto) => (
-                                  <div
-                                    key={foto.id}
-                                    className="overflow-hidden rounded-xl border border-gray-200 bg-white"
-                                  >
-                                    <img
-                                      src={foto.url}
-                                      alt={`Foto ${tipo.nombre}`}
-                                      className="aspect-[4/3] w-full object-cover"
-                                    />
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
                 {CATEGORIAS.map(
                   (categoria) => {
 
@@ -1267,7 +1203,7 @@ export default function ChecklistPage() {
 
                 </section>
 
-                <section>
+                <section className="mb-8 border-b border-gray-100 pb-8">
 
                   <div className="mb-5">
 
@@ -1379,6 +1315,70 @@ export default function ChecklistPage() {
                   >
                     {mensaje}
                   </div>
+                )}
+
+                {/* FOTOGRAFÍAS DE RECEPCIÓN - AL FINAL */}
+                {fotosGuardadas.length > 0 && (
+                  <section className="mt-10 border-t border-gray-100 pt-10">
+                    <div className="mb-5">
+                      <h2 className="text-xl font-bold text-gray-950">
+                        Fotografías de recepción
+                      </h2>
+                      <p className="mt-1 text-xs text-gray-400">
+                        Fotos registradas al momento de recibir el equipo
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {TIPOS_FOTO.map((tipo) => {
+                        const fotosDelTipo = fotosActualesPorTipo(
+                          tipo.id
+                        );
+
+                        if (fotosDelTipo.length === 0) {
+                          return null;
+                        }
+
+                        return (
+                          <div
+                            key={tipo.id}
+                            className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50"
+                          >
+                            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">
+                                  {tipo.icono}
+                                </span>
+                                <span className="text-sm font-bold text-gray-900">
+                                  {tipo.nombre}
+                                </span>
+                              </div>
+                              <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700">
+                                GUARDADA
+                              </span>
+                            </div>
+
+                            <div className="space-y-2 p-3">
+                              {fotosDelTipo.map(
+                                (foto) => (
+                                  <div
+                                    key={foto.id}
+                                    className="overflow-hidden rounded-xl border border-gray-200 bg-white"
+                                  >
+                                    <img
+                                      src={foto.url}
+                                      alt={`Foto ${tipo.nombre}`}
+                                      className="aspect-[4/3] w-full object-cover"
+                                    />
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
                 )}
 
                 <div className="mt-8 flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:justify-end">
