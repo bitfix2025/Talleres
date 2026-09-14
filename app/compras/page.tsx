@@ -273,79 +273,33 @@ export default function ComprasPage() {
   };
 
   const recibirOrden = async () => {
-    if (!ordenSeleccionada?.detalles) return;
+    if (!ordenSeleccionada) return;
 
     setGuardandoRecepcion(true);
     setError("");
 
     try {
-      // Actualizar cantidad recibida en detalles
-      for (const detalle of ordenSeleccionada.detalles) {
-        const cantidadRecibida = cantidadesRecibidas[detalle.id] || 0;
-
-        if (cantidadRecibida > 0) {
-          // Si el producto no existe, crearlo
-          let productoId = detalle.producto_id;
-          if (!productoId) {
-            const { data: nuevoProducto, error: errorCrear } = await supabase
-              .from("productos")
-              .insert({
-                taller_id: TALLER_ID,
-                nombre: detalle.producto?.nombre || `Producto ${detalle.id}`,
-                stock_actual: cantidadRecibida,
-                stock_minimo: 0,
-                costo: detalle.precio_unitario,
-                precio: detalle.precio_unitario,
-                activo: true,
-              })
-              .select()
-              .single();
-
-            if (errorCrear) throw errorCrear;
-            productoId = nuevoProducto.id;
-          } else {
-            // Actualizar cantidad recibida
-            await supabase
-              .from("ordenes_compra_detalles")
-              .update({ cantidad_recibida: cantidadRecibida })
-              .eq("id", detalle.id);
-
-            // Actualizar stock del producto
-            const nuevoStock = (detalle.producto?.stock_actual || 0) + cantidadRecibida;
-            await supabase
-              .from("productos")
-              .update({ stock_actual: nuevoStock, updated_at: new Date().toISOString() })
-              .eq("id", detalle.producto_id)
-              .eq("taller_id", TALLER_ID);
-          }
-
-          // Crear movimiento de stock
-          await supabase.from("movimientos_stock").insert({
-            taller_id: TALLER_ID,
-            producto_id: productoId,
-            tipo: "ENTRADA",
-            cantidad: cantidadRecibida,
-            motivo: `Orden de compra ${ordenSeleccionada.numero}`,
-            referencia_tipo: "ORDEN_COMPRA",
-            referencia_id: ordenSeleccionada.id,
-            costo_unitario: detalle.precio_unitario,
-          });
+      const { error: errorRecepcion } = await supabase.rpc(
+        "recibir_orden_compra",
+        {
+          p_orden_id: ordenSeleccionada.id,
         }
-      }
+      );
 
-      // Actualizar estado de orden
-      await supabase
-        .from("ordenes_compra")
-        .update({ estado: "RECIBIDA" })
-        .eq("id", ordenSeleccionada.id);
+      if (errorRecepcion) throw errorRecepcion;
 
       await cargarDatos();
+
       setOrdenSeleccionada(null);
       setCantidadesRecibidas({});
       setMensaje("Orden recibida correctamente");
       setTimeout(() => setMensaje(""), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al recibir orden");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Error al recibir orden"
+      );
     } finally {
       setGuardandoRecepcion(false);
     }
