@@ -687,6 +687,23 @@ export default function ComprasPage() {
                 placeholder="O nombre nuevo"
                 className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
               />
+              <select
+                id="producto-categoria"
+                className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
+              >
+                <option value="">Sector</option>
+                <option value="Baterías">Baterías</option>
+                <option value="Pantallas">Pantallas</option>
+                <option value="Módulos">Módulos</option>
+                <option value="Flex">Flex</option>
+                <option value="Cámaras">Cámaras</option>
+                <option value="Chasis">Chasis</option>
+                <option value="Tapas traseras">Tapas traseras</option>
+                <option value="Conectores">Conectores</option>
+                <option value="IC / Componentes">IC / Componentes</option>
+                <option value="Accesorios">Accesorios</option>
+                <option value="Otros">Otros</option>
+              </select>
               <input
                 type="number"
                 id="cantidad-input"
@@ -708,6 +725,7 @@ export default function ComprasPage() {
                 onClick={() => {
                   const productoId = Number((document.getElementById("producto-select") as HTMLSelectElement)?.value) || null;
                   const productoNombre = (document.getElementById("producto-nombre") as HTMLInputElement)?.value;
+                  const categoria = (document.getElementById("producto-categoria") as HTMLSelectElement)?.value;
                   const cantidad = Number((document.getElementById("cantidad-input") as HTMLInputElement)?.value);
                   const precio = Number((document.getElementById("precio-input") as HTMLInputElement)?.value);
 
@@ -728,9 +746,15 @@ export default function ComprasPage() {
                     return;
                   }
 
-                  setDetalles([...detalles, { producto_id: productoId, producto_nombre: nombre, cantidad, precio_unitario: precio }]);
+                  setDetalles([...detalles, {
+                    producto_id: productoId,
+                    producto_nombre: nombre,
+                    cantidad,
+                    precio_unitario: precio
+                  }]);
                   (document.getElementById("producto-select") as HTMLSelectElement).value = "";
                   (document.getElementById("producto-nombre") as HTMLInputElement).value = "";
+                  (document.getElementById("producto-categoria") as HTMLSelectElement).value = "";
                   (document.getElementById("cantidad-input") as HTMLInputElement).value = "";
                   (document.getElementById("precio-input") as HTMLInputElement).value = "";
                 }}
