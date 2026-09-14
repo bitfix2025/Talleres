@@ -26,6 +26,7 @@ import {
   Boxes,
   Receipt,
   SlidersHorizontal,
+  ShoppingCart,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -171,6 +172,12 @@ export default function Home() {
                 icon={<Package size={18} />}
                 label="Inventario"
                 onClick={() => irA("/inventario")}
+              />
+
+              <SidebarItem
+                icon={<ShoppingCart size={18} />}
+                label="Compras"
+                onClick={() => irA("/compras")}
               />
 
               <SidebarItem
@@ -408,7 +415,7 @@ export default function Home() {
                 onClick={() =>
                   irA("/reparaciones/nueva")
                 }
-                className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#18a66b]/20 transition hover:bg-[#148f5c] hover:shadow-xl hover:shadow-[#18a66b]/20 active:scale-[0.98]"
+                className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#18a66b]/20 transition hover:bg-[#148f5c] active:scale-[0.98]"
               >
 
                 <Plus
@@ -940,7 +947,7 @@ function MetricCard({
     <button
       type="button"
       onClick={onClick}
-      className="group rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md active:scale-[0.99]"
+      className="group rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md active:scale-[0.98]"
     >
 
       <div className="flex items-start justify-between">
@@ -1003,7 +1010,7 @@ function QuickAction({
     <button
       type="button"
       onClick={onClick}
-      className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#bcebd5] hover:shadow-md active:scale-[0.99]"
+      className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#bcebd5] hover:shadow-md active:scale-95"
     >
 
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b] transition-all duration-200 group-hover:bg-[#18a66b] group-hover:text-white">
