@@ -252,7 +252,6 @@ export default function ComprasPage() {
         precio_unitario: d.precio_unitario,
         subtotal: d.cantidad * d.precio_unitario,
         cantidad_recibida: 0,
-        producto_nombre: d.producto_nombre,
       }));
 
       const { error: errorDetalles } = await supabase.from("ordenes_compra_detalles").insert(filasDetalles);
