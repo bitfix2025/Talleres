@@ -87,7 +87,7 @@ export default function ComprasPage() {
   const [mostrarNuevaOrden, setMostrarNuevaOrden] = useState(false);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState<number | null>(null);
   const [detalles, setDetalles] = useState<
-    { producto_id: number; cantidad: number; precio_unitario: number }[]
+    { producto_id: number | null; producto_nombre: string; cantidad: number; precio_unitario: number }[]
   >([]);
   const [guardandoOrden, setGuardandoOrden] = useState(false);
 
@@ -252,6 +252,7 @@ export default function ComprasPage() {
         precio_unitario: d.precio_unitario,
         subtotal: d.cantidad * d.precio_unitario,
         cantidad_recibida: 0,
+        producto_nombre: d.producto_nombre,
       }));
 
       const { error: errorDetalles } = await supabase.from("ordenes_compra_detalles").insert(filasDetalles);
@@ -283,24 +284,45 @@ export default function ComprasPage() {
         const cantidadRecibida = cantidadesRecibidas[detalle.id] || 0;
 
         if (cantidadRecibida > 0) {
-          // Actualizar cantidad recibida
-          await supabase
-            .from("ordenes_compra_detalles")
-            .update({ cantidad_recibida: cantidadRecibida })
-            .eq("id", detalle.id);
+          // Si el producto no existe, crearlo
+          let productoId = detalle.producto_id;
+          if (!productoId) {
+            const { data: nuevoProducto, error: errorCrear } = await supabase
+              .from("productos")
+              .insert({
+                taller_id: TALLER_ID,
+                nombre: detalle.producto?.nombre || `Producto ${detalle.id}`,
+                stock_actual: cantidadRecibida,
+                stock_minimo: 0,
+                costo: detalle.precio_unitario,
+                precio: detalle.precio_unitario,
+                activo: true,
+              })
+              .select()
+              .single();
 
-          // Actualizar stock del producto
-          const nuevoStock = (detalle.producto?.stock_actual || 0) + cantidadRecibida;
-          await supabase
-            .from("productos")
-            .update({ stock_actual: nuevoStock, updated_at: new Date().toISOString() })
-            .eq("id", detalle.producto_id)
-            .eq("taller_id", TALLER_ID);
+            if (errorCrear) throw errorCrear;
+            productoId = nuevoProducto.id;
+          } else {
+            // Actualizar cantidad recibida
+            await supabase
+              .from("ordenes_compra_detalles")
+              .update({ cantidad_recibida: cantidadRecibida })
+              .eq("id", detalle.id);
+
+            // Actualizar stock del producto
+            const nuevoStock = (detalle.producto?.stock_actual || 0) + cantidadRecibida;
+            await supabase
+              .from("productos")
+              .update({ stock_actual: nuevoStock, updated_at: new Date().toISOString() })
+              .eq("id", detalle.producto_id)
+              .eq("taller_id", TALLER_ID);
+          }
 
           // Crear movimiento de stock
           await supabase.from("movimientos_stock").insert({
             taller_id: TALLER_ID,
-            producto_id: detalle.producto_id,
+            producto_id: productoId,
             tipo: "ENTRADA",
             cantidad: cantidadRecibida,
             motivo: `Orden de compra ${ordenSeleccionada.numero}`,
@@ -671,27 +693,24 @@ export default function ComprasPage() {
             <div>
               <label className="mb-1.5 block text-xs font-bold text-gray-600">Productos</label>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {detalles.map((detalle, idx) => {
-                  const producto = productos.find((p) => p.id === detalle.producto_id);
-                  return (
-                    <div key={idx} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-[#f8faf9] p-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-900">{producto?.nombre}</p>
-                        <p className="text-xs text-gray-500">
-                          {detalle.cantidad} x {moneda(detalle.precio_unitario)} ={" "}
-                          {moneda(detalle.cantidad * detalle.precio_unitario)}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setDetalles(detalles.filter((_, i) => i !== idx))}
-                        className="p-1 hover:bg-red-100 rounded text-red-600"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                {detalles.map((detalle, idx) => (
+                  <div key={idx} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-[#f8faf9] p-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-900">{detalle.producto_nombre}</p>
+                      <p className="text-xs text-gray-500">
+                        {detalle.cantidad} x {moneda(detalle.precio_unitario)} ={" "}
+                        {moneda(detalle.cantidad * detalle.precio_unitario)}
+                      </p>
                     </div>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={() => setDetalles(detalles.filter((_, i) => i !== idx))}
+                      className="p-1 hover:bg-red-100 rounded text-red-600"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -701,13 +720,19 @@ export default function ComprasPage() {
                 id="producto-select"
                 className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
               >
-                <option value="">Selecciona producto</option>
+                <option value="">Producto inventario</option>
                 {productos.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nombre}
                   </option>
                 ))}
               </select>
+              <input
+                type="text"
+                id="producto-nombre"
+                placeholder="O nombre nuevo"
+                className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
+              />
               <input
                 type="number"
                 id="cantidad-input"
@@ -727,26 +752,35 @@ export default function ComprasPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const productoId = Number((document.getElementById("producto-select") as HTMLSelectElement)?.value);
+                  const productoId = Number((document.getElementById("producto-select") as HTMLSelectElement)?.value) || null;
+                  const productoNombre = (document.getElementById("producto-nombre") as HTMLInputElement)?.value;
                   const cantidad = Number((document.getElementById("cantidad-input") as HTMLInputElement)?.value);
                   const precio = Number((document.getElementById("precio-input") as HTMLInputElement)?.value);
 
-                  if (!productoId || !cantidad || !precio) {
-                    setError("Completa todos los campos");
+                  if (!cantidad || !precio) {
+                    setError("Completa cantidad y precio");
                     return;
                   }
 
-                  if (detalles.some((d) => d.producto_id === productoId)) {
+                  if (!productoId && !productoNombre.trim()) {
+                    setError("Selecciona producto o ingresa nombre");
+                    return;
+                  }
+
+                  const nombre = productoNombre.trim() || productos.find((p) => p.id === productoId)?.nombre || "";
+
+                  if (detalles.some((d) => d.producto_id === productoId && productoId)) {
                     setError("Este producto ya está en la orden");
                     return;
                   }
 
-                  setDetalles([...detalles, { producto_id: productoId, cantidad, precio_unitario: precio }]);
+                  setDetalles([...detalles, { producto_id: productoId, producto_nombre: nombre, cantidad, precio_unitario: precio }]);
                   (document.getElementById("producto-select") as HTMLSelectElement).value = "";
+                  (document.getElementById("producto-nombre") as HTMLInputElement).value = "";
                   (document.getElementById("cantidad-input") as HTMLInputElement).value = "";
                   (document.getElementById("precio-input") as HTMLInputElement).value = "";
                 }}
-                className="sm:col-span-3 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#148f5c]"
+                className="sm:col-span-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#148f5c]"
               >
                 Agregar producto
               </button>
