@@ -170,6 +170,11 @@ export default function Home() {
               <SidebarItem
                 icon={<Package size={18} />}
                 label="Inventario"
+              <SidebarItem
+                icon={<Package size={18} />}
+                label="Inventario"
+                onClick={() => irA("/inventario")}
+              />
               />
 
               <SidebarItem
