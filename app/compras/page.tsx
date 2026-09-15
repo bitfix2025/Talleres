@@ -87,7 +87,13 @@ export default function ComprasPage() {
   const [mostrarNuevaOrden, setMostrarNuevaOrden] = useState(false);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState<number | null>(null);
   const [detalles, setDetalles] = useState<
-    { producto_id: number | null; producto_nombre: string; cantidad: number; precio_unitario: number }[]
+    {
+      producto_id: number | null;
+      producto_nombre: string;
+      categoria: string;
+      cantidad: number;
+      precio_unitario: number;
+    }[]
   >([]);
   const [guardandoOrden, setGuardandoOrden] = useState(false);
 
@@ -745,12 +751,16 @@ export default function ComprasPage() {
                     return;
                   }
 
-                  setDetalles([...detalles, {
-                    producto_id: productoId,
-                    producto_nombre: nombre,
-                    cantidad,
-                    precio_unitario: precio
-                  }]);
+                  setDetalles([
+                    ...detalles,
+                    {
+                      producto_id: productoId,
+                      producto_nombre: nombre,
+                      categoria: categoria || "OTROS",
+                      cantidad,
+                      precio_unitario: precio,
+                    },
+                  ]);
                   (document.getElementById("producto-select") as HTMLSelectElement).value = "";
                   (document.getElementById("producto-nombre") as HTMLInputElement).value = "";
                   (document.getElementById("producto-categoria") as HTMLSelectElement).value = "";
