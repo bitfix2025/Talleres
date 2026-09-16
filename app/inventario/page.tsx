@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -50,6 +51,7 @@ type Producto = {
   marca: string | null;
   modelo: string | null;
   sku: string | null;
+  codigo_barras: string | null;
   descripcion: string | null;
   image_url: string | null;
   costo: number;
@@ -70,7 +72,7 @@ const moneda = (valor: number) =>
   }).format(valor);
 
 const selectProducto =
-  "id,nombre,categoria,marca,modelo,sku,descripcion,image_url,costo,precio,stock_actual,stock_minimo,activo,created_at";
+  "id,nombre,categoria,marca,modelo,sku,codigo_barras,descripcion,image_url,costo,precio,stock_actual,stock_minimo,activo,created_at";
 
 export default function InventarioPage() {
   const router = useRouter();
@@ -124,6 +126,7 @@ export default function InventarioPage() {
     marca: "",
     modelo: "",
     sku: "",
+    codigoBarras: "",
     costo: "",
     margen: "",
     precio: "",
@@ -138,6 +141,7 @@ export default function InventarioPage() {
     marca: "",
     modelo: "",
     sku: "",
+    codigoBarras: "",
     costo: "",
     margen: "",
     precio: "",
@@ -224,6 +228,7 @@ export default function InventarioPage() {
           producto.marca,
           producto.modelo,
           producto.sku,
+          producto.codigo_barras,
         ]
           .filter(Boolean)
           .some((valor) =>
@@ -367,6 +372,8 @@ export default function InventarioPage() {
       marca: producto.marca ?? "",
       modelo: producto.modelo ?? "",
       sku: producto.sku ?? "",
+      codigoBarras:
+        producto.codigo_barras ?? "",
       costo: String(producto.costo),
       margen: margenActual.toFixed(2),
       precio: String(producto.precio),
@@ -495,6 +502,8 @@ export default function InventarioPage() {
             nuevo.modelo.trim() || null,
           sku:
             nuevo.sku.trim() || null,
+          codigo_barras:
+            nuevo.codigoBarras.trim() || null,
           descripcion:
             nuevo.descripcion.trim() || null,
           image_url: imageUrl,
@@ -555,6 +564,7 @@ export default function InventarioPage() {
       marca: "",
       modelo: "",
       sku: "",
+      codigoBarras: "",
       costo: "",
       margen: "",
       precio: "",
@@ -668,6 +678,9 @@ export default function InventarioPage() {
             null,
           sku:
             editado.sku.trim() ||
+            null,
+          codigo_barras:
+            editado.codigoBarras.trim() ||
             null,
           costo,
           precio,
@@ -1128,7 +1141,7 @@ export default function InventarioPage() {
                       event.target.value
                     )
                   }
-                  placeholder="Buscar producto, modelo o SKU..."
+                  placeholder="Buscar producto, modelo, SKU o código de barras..."
                   className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] pl-10 pr-4 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-2 focus:ring-[#18a66b]/10"
                 />
 
@@ -1553,6 +1566,14 @@ export default function InventarioPage() {
                   value={
                     productoSeleccionado.sku ||
                     "Sin SKU"
+                  }
+                />
+
+                <InfoBox
+                  label="Código de barras"
+                  value={
+                    productoSeleccionado.codigo_barras ||
+                    "Sin código de barras"
                   }
                 />
 
@@ -2220,6 +2241,21 @@ export default function InventarioPage() {
                 />
 
                 <Field
+                  label="Código de barras"
+                  value={
+                    editado.codigoBarras
+                  }
+                  onChange={(value) =>
+                    setEditado({
+                      ...editado,
+                      codigoBarras:
+                        value,
+                    })
+                  }
+                  placeholder="Ej. 7501234567890"
+                />
+
+                <Field
                   label="Costo (USD)"
                   type="number"
                   min="0"
@@ -2566,6 +2602,21 @@ export default function InventarioPage() {
                   })
                 }
                 placeholder="IP13-OLED-01"
+              />
+
+              <Field
+                label="Código de barras"
+                value={
+                  nuevo.codigoBarras
+                }
+                onChange={(value) =>
+                  setNuevo({
+                    ...nuevo,
+                    codigoBarras:
+                      value,
+                  })
+                }
+                placeholder="Ej. 7501234567890"
               />
 
               <Field
