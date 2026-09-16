@@ -1,3 +1,4 @@
+
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -22,6 +23,7 @@ import {
   ArrowUpRight,
   ArrowLeft,
   Home,
+  Percent,
 } from "lucide-react";
 
 const TALLER_ID = 1;
@@ -43,6 +45,7 @@ type Producto = {
   nombre: string;
   precio: number;
   stock_actual: number;
+  costo?: number;
 };
 
 type DetalleForm = {
@@ -51,6 +54,8 @@ type DetalleForm = {
   categoria: string;
   cantidad: number;
   precio_unitario: number;
+  margen: number;
+  precio_venta: number;
 };
 
 type OrdenCompraDetalle = {
@@ -85,7 +90,8 @@ const moneda = (valor: number) =>
   }).format(valor);
 
 export default function ComprasPage() {
-  const [tab, setTab] = useState<"ordenes" | "proveedores">("ordenes");
+  const [tab, setTab] =
+    useState<"ordenes" | "proveedores">("ordenes");
 
   const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -96,18 +102,20 @@ export default function ComprasPage() {
   const [mensaje, setMensaje] = useState("");
 
   const [busqueda, setBusqueda] = useState("");
-  const [filtro, setFiltro] = useState<
-    "TODAS" | "PENDIENTE" | "RECIBIDA"
-  >("TODAS");
+  const [filtro, setFiltro] =
+    useState<"TODAS" | "PENDIENTE" | "RECIBIDA">("TODAS");
 
-  const [mostrarNuevaOrden, setMostrarNuevaOrden] = useState(false);
+  const [mostrarNuevaOrden, setMostrarNuevaOrden] =
+    useState(false);
+
   const [proveedorSeleccionado, setProveedorSeleccionado] =
     useState<number | null>(null);
 
   const [detalles, setDetalles] = useState<DetalleForm[]>([]);
   const [guardandoOrden, setGuardandoOrden] = useState(false);
 
-  const [mostrarNuevoProveedor, setMostrarNuevoProveedor] = useState(false);
+  const [mostrarNuevoProveedor, setMostrarNuevoProveedor] =
+    useState(false);
 
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombre: "",
@@ -117,16 +125,17 @@ export default function ComprasPage() {
     ciudad: "",
   });
 
-  const [guardandoProveedor, setGuardandoProveedor] = useState(false);
+  const [guardandoProveedor, setGuardandoProveedor] =
+    useState(false);
 
   const [ordenSeleccionada, setOrdenSeleccionada] =
     useState<OrdenCompra | null>(null);
 
-  const [cantidadesRecibidas, setCantidadesRecibidas] = useState<
-    Record<number, number>
-  >({});
+  const [cantidadesRecibidas, setCantidadesRecibidas] =
+    useState<Record<number, number>>({});
 
-  const [guardandoRecepcion, setGuardandoRecepcion] = useState(false);
+  const [guardandoRecepcion, setGuardandoRecepcion] =
+    useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -137,41 +146,43 @@ export default function ComprasPage() {
     setError("");
 
     try {
-      const { data: ordenesData, error: errorOrdenes } = await supabase
-        .from("ordenes_compra")
-        .select(
-          `
-          *,
-          proveedor:proveedor_id(
-            id,
-            nombre,
-            email,
-            telefono,
-            direccion,
-            ciudad,
-            activo,
-            created_at,
-            taller_id
-          ),
-          detalles:ordenes_compra_detalles(
-            id,
-            orden_id,
-            producto_id,
-            cantidad,
-            precio_unitario,
-            subtotal,
-            cantidad_recibida,
-            producto:producto_id(
+      const { data: ordenesData, error: errorOrdenes } =
+        await supabase
+          .from("ordenes_compra")
+          .select(
+            `
+            *,
+            proveedor:proveedor_id(
               id,
               nombre,
-              precio,
-              stock_actual
+              email,
+              telefono,
+              direccion,
+              ciudad,
+              activo,
+              created_at,
+              taller_id
+            ),
+            detalles:ordenes_compra_detalles(
+              id,
+              orden_id,
+              producto_id,
+              cantidad,
+              precio_unitario,
+              subtotal,
+              cantidad_recibida,
+              producto:producto_id(
+                id,
+                nombre,
+                precio,
+                costo,
+                stock_actual
+              )
             )
+          `
           )
-        `
-        )
-        .eq("taller_id", TALLER_ID)
-        .order("created_at", { ascending: false });
+          .eq("taller_id", TALLER_ID)
+          .order("created_at", { ascending: false });
 
       if (errorOrdenes) {
         throw new Error(
@@ -200,7 +211,9 @@ export default function ComprasPage() {
       const { data: productosData, error: errorProductos } =
         await supabase
           .from("productos")
-          .select("id, nombre, precio, stock_actual")
+          .select(
+            "id, nombre, precio, costo, stock_actual"
+          )
           .eq("taller_id", TALLER_ID)
           .eq("activo", true)
           .order("nombre", { ascending: true });
@@ -214,7 +227,9 @@ export default function ComprasPage() {
       setProductos((productosData as Producto[]) || []);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error al cargar datos"
+        err instanceof Error
+          ? err.message
+          : "Error al cargar datos"
       );
     } finally {
       setCargando(false);
@@ -242,7 +257,8 @@ export default function ComprasPage() {
           nombre: nuevoProveedor.nombre.trim(),
           email: nuevoProveedor.email.trim() || null,
           telefono: nuevoProveedor.telefono.trim() || null,
-          direccion: nuevoProveedor.direccion.trim() || null,
+          direccion:
+            nuevoProveedor.direccion.trim() || null,
           ciudad: nuevoProveedor.ciudad.trim() || null,
           activo: true,
         })
@@ -298,6 +314,28 @@ export default function ComprasPage() {
       return;
     }
 
+    for (const detalle of detalles) {
+      if (
+        !Number.isFinite(detalle.precio_unitario) ||
+        detalle.precio_unitario < 0
+      ) {
+        setError(
+          `El costo de "${detalle.producto_nombre}" no es válido.`
+        );
+        return;
+      }
+
+      if (
+        !Number.isFinite(detalle.margen) ||
+        detalle.margen < 0
+      ) {
+        setError(
+          `El margen de "${detalle.producto_nombre}" no es válido.`
+        );
+        return;
+      }
+    }
+
     setGuardandoOrden(true);
     setError("");
 
@@ -328,7 +366,9 @@ export default function ComprasPage() {
 
       const total = detalles.reduce(
         (sum, detalle) =>
-          sum + detalle.cantidad * detalle.precio_unitario,
+          sum +
+          detalle.cantidad *
+            detalle.precio_unitario,
         0
       );
 
@@ -369,9 +409,30 @@ export default function ComprasPage() {
         cantidad_recibida: number;
       }[] = [];
 
+      /*
+       * IMPORTANTE:
+       *
+       * La compra ahora también actualiza:
+       *
+       * costo = costo de compra
+       * precio = costo + margen
+       *
+       * De esta forma no hay que volver a Inventario
+       * para editar el producto después de comprarlo.
+       */
+
       for (const detalle of detalles) {
         let productoId: number | null =
           detalle.producto_id;
+
+        const costoCompra =
+          Number(detalle.precio_unitario);
+
+        const margen =
+          Number(detalle.margen);
+
+        const precioVenta =
+          Number(detalle.precio_venta);
 
         if (productoId === null) {
           const nombreNuevo =
@@ -397,8 +458,13 @@ export default function ComprasPage() {
               modelo: null,
               sku: null,
               descripcion: null,
-              costo: detalle.precio_unitario,
-              precio: detalle.precio_unitario,
+
+              // COSTO DE LA COMPRA
+              costo: costoCompra,
+
+              // PRECIO DE VENTA CALCULADO
+              precio: precioVenta,
+
               stock_actual: 0,
               stock_minimo: 0,
               activo: true,
@@ -426,6 +492,48 @@ export default function ComprasPage() {
                 a.nombre.localeCompare(b.nombre)
             )
           );
+        } else {
+          /*
+           * PRODUCTO EXISTENTE:
+           *
+           * Actualizamos directamente el costo y
+           * el precio de venta desde la compra.
+           *
+           * NO tocamos stock aquí.
+           * El stock solamente aumenta cuando
+           * se confirma la recepción.
+           */
+          const { data: productoActualizado, error: errorUpdate } =
+            await supabase
+              .from("productos")
+              .update({
+                costo: costoCompra,
+                precio: precioVenta,
+              })
+              .eq("id", productoId)
+              .eq("taller_id", TALLER_ID)
+              .select()
+              .single();
+
+          if (errorUpdate) {
+            throw new Error(
+              `Error actualizando "${detalle.producto_nombre}": ${errorUpdate.message}`
+            );
+          }
+
+          if (productoActualizado) {
+            setProductos((prev) =>
+              prev.map((producto) =>
+                producto.id === productoId
+                  ? {
+                      ...producto,
+                      costo: costoCompra,
+                      precio: precioVenta,
+                    }
+                  : producto
+              )
+            );
+          }
         }
 
         const productoIdFinal = Number(productoId);
@@ -443,10 +551,9 @@ export default function ComprasPage() {
           orden_id: Number(orden.id),
           producto_id: productoIdFinal,
           cantidad: detalle.cantidad,
-          precio_unitario: detalle.precio_unitario,
+          precio_unitario: costoCompra,
           subtotal:
-            detalle.cantidad *
-            detalle.precio_unitario,
+            detalle.cantidad * costoCompra,
           cantidad_recibida: 0,
         });
       }
@@ -469,10 +576,10 @@ export default function ComprasPage() {
       setDetalles([]);
 
       setMensaje(
-        "Orden de compra creada: " + nuevoNumero
+        `Orden ${nuevoNumero} creada. Costo y precio de venta actualizados.`
       );
 
-      setTimeout(() => setMensaje(""), 3000);
+      setTimeout(() => setMensaje(""), 3500);
     } catch (err) {
       setError(
         err instanceof Error
@@ -585,6 +692,12 @@ export default function ComprasPage() {
     0
   );
 
+  const totalUnidades = detalles.reduce(
+    (sum, detalle) =>
+      sum + detalle.cantidad,
+    0
+  );
+
   if (cargando) {
     return (
       <main className="min-h-screen bg-[#f4f7f5]">
@@ -605,9 +718,7 @@ export default function ComprasPage() {
     <main className="min-h-screen bg-[#f4f7f5] text-[#17201b]">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
 
-        {/* ================================================= */}
         {/* NAVEGACIÓN */}
-        {/* ================================================= */}
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -641,9 +752,7 @@ export default function ComprasPage() {
           </div>
         </div>
 
-        {/* ================================================= */}
         {/* HEADER */}
-        {/* ================================================= */}
 
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -720,9 +829,7 @@ export default function ComprasPage() {
           </div>
         )}
 
-        {/* ================================================= */}
         {/* TABS */}
-        {/* ================================================= */}
 
         <div className="mt-7 flex gap-1 border-b border-gray-200">
           <button
@@ -760,9 +867,7 @@ export default function ComprasPage() {
           </button>
         </div>
 
-        {/* ================================================= */}
-        {/* ÓRDENES */}
-        {/* ================================================= */}
+        {/* ORDENES */}
 
         {tab === "ordenes" && (
           <>
@@ -770,7 +875,9 @@ export default function ComprasPage() {
               <StatCard
                 icon={<ShoppingCart size={18} />}
                 label="Total de órdenes"
-                value={String(estadisticas.totalOrdenes)}
+                value={String(
+                  estadisticas.totalOrdenes
+                )}
                 helper="Órdenes registradas"
                 iconClass="bg-[#e9f8f1] text-[#18a66b]"
               />
@@ -778,7 +885,9 @@ export default function ComprasPage() {
               <StatCard
                 icon={<Clock size={18} />}
                 label="Pendientes"
-                value={String(estadisticas.pendientes)}
+                value={String(
+                  estadisticas.pendientes
+                )}
                 helper="Esperando recepción"
                 iconClass="bg-amber-50 text-amber-600"
               />
@@ -786,7 +895,9 @@ export default function ComprasPage() {
               <StatCard
                 icon={<CheckCircle2 size={18} />}
                 label="Recibidas"
-                value={String(estadisticas.recibidas)}
+                value={String(
+                  estadisticas.recibidas
+                )}
                 helper="Órdenes completadas"
                 iconClass="bg-green-50 text-green-600"
               />
@@ -794,7 +905,9 @@ export default function ComprasPage() {
               <StatCard
                 icon={<DollarSign size={18} />}
                 label="Total gastado"
-                value={moneda(estadisticas.totalGastado)}
+                value={moneda(
+                  estadisticas.totalGastado
+                )}
                 helper="Compras recibidas"
                 iconClass="bg-blue-50 text-blue-600"
               />
@@ -1017,9 +1130,7 @@ export default function ComprasPage() {
           </>
         )}
 
-        {/* ================================================= */}
         {/* PROVEEDORES */}
-        {/* ================================================= */}
 
         {tab === "proveedores" && (
           <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -1176,7 +1287,7 @@ export default function ComprasPage() {
                     </div>
 
                     <p className="mt-1 text-xs leading-5 text-gray-500 sm:text-sm">
-                      Crea una orden, agrega los productos y define las cantidades que deseas solicitar.
+                      Crea una orden indicando el costo de compra y el margen de venta de cada producto.
                     </p>
                   </div>
                 </div>
@@ -1267,7 +1378,7 @@ export default function ComprasPage() {
                           </h3>
 
                           <p className="mt-0.5 text-xs text-gray-400">
-                            Productos y cantidades solicitadas.
+                            Costo, margen y precio de venta.
                           </p>
                         </div>
 
@@ -1314,16 +1425,14 @@ export default function ComprasPage() {
                                             {detalle.producto_nombre}
                                           </p>
 
-                                          {detalle.producto_id ? (
-                                            <p className="mt-1 text-[11px] text-gray-400">
-                                              Producto del inventario
-                                            </p>
-                                          ) : (
-                                            <p className="mt-1 text-[11px] font-bold text-[#18a66b]">
-                                              Producto nuevo ·{" "}
-                                              {detalle.categoria}
-                                            </p>
-                                          )}
+                                          <p className="mt-1 text-[11px] text-gray-400">
+                                            Costo{" "}
+                                            {moneda(
+                                              detalle.precio_unitario
+                                            )}{" "}
+                                            · Margen{" "}
+                                            {detalle.margen}%
+                                          </p>
                                         </div>
 
                                         <button
@@ -1343,27 +1452,53 @@ export default function ComprasPage() {
                                         </button>
                                       </div>
 
-                                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                          <span className="rounded-lg bg-gray-100 px-2.5 py-1.5 font-bold">
-                                            {detalle.cantidad} unidades
-                                          </span>
+                                      <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                                        <div className="rounded-xl bg-gray-50 p-3">
+                                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                            Cantidad
+                                          </p>
 
-                                          <span>×</span>
+                                          <p className="mt-1 text-sm font-black text-gray-900">
+                                            {detalle.cantidad}
+                                          </p>
+                                        </div>
 
-                                          <span className="font-semibold">
+                                        <div className="rounded-xl bg-gray-50 p-3">
+                                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                            Costo
+                                          </p>
+
+                                          <p className="mt-1 text-sm font-black text-gray-900">
                                             {moneda(
                                               detalle.precio_unitario
                                             )}
-                                          </span>
+                                          </p>
                                         </div>
 
-                                        <p className="text-sm font-black text-gray-950">
-                                          {moneda(
-                                            detalle.cantidad *
-                                              detalle.precio_unitario
-                                          )}
-                                        </p>
+                                        <div className="rounded-xl bg-[#e9f8f1] p-3">
+                                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#148f5c]">
+                                            Precio venta
+                                          </p>
+
+                                          <p className="mt-1 text-sm font-black text-[#148f5c]">
+                                            {moneda(
+                                              detalle.precio_venta
+                                            )}
+                                          </p>
+                                        </div>
+
+                                        <div className="rounded-xl bg-gray-50 p-3">
+                                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                            Total compra
+                                          </p>
+
+                                          <p className="mt-1 text-sm font-black text-gray-900">
+                                            {moneda(
+                                              detalle.cantidad *
+                                                detalle.precio_unitario
+                                            )}
+                                          </p>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -1390,7 +1525,7 @@ export default function ComprasPage() {
                             </h3>
 
                             <p className="mt-0.5 text-xs text-gray-400">
-                              Selecciona un producto existente o crea uno nuevo.
+                              El costo y margen quedan guardados directamente en el inventario.
                             </p>
                           </div>
                         </div>
@@ -1406,6 +1541,49 @@ export default function ComprasPage() {
 
                             <select
                               id="producto-select"
+                              onChange={(e) => {
+                                const productoId =
+                                  Number(e.target.value) ||
+                                  null;
+
+                                if (!productoId) return;
+
+                                const producto =
+                                  productos.find(
+                                    (p) =>
+                                      p.id ===
+                                      productoId
+                                  );
+
+                                if (producto) {
+                                  const nombreInput =
+                                    document.getElementById(
+                                      "producto-nombre"
+                                    ) as HTMLInputElement;
+
+                                  const precioInput =
+                                    document.getElementById(
+                                      "precio-input"
+                                    ) as HTMLInputElement;
+
+                                  if (
+                                    nombreInput
+                                  ) {
+                                    nombreInput.value =
+                                      producto.nombre;
+                                  }
+
+                                  if (
+                                    precioInput &&
+                                    producto.costo
+                                  ) {
+                                    precioInput.value =
+                                      String(
+                                        producto.costo
+                                      );
+                                  }
+                                }
+                              }}
                               className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-4 focus:ring-[#18a66b]/10"
                             >
                               <option value="">
@@ -1426,7 +1604,7 @@ export default function ComprasPage() {
                           <div className="sm:col-span-2">
                             <div className="mb-2 flex items-center gap-2">
                               <span className="text-xs font-bold text-gray-600">
-                                O crear producto nuevo
+                                Producto nuevo
                               </span>
 
                               <span className="h-px flex-1 bg-gray-100" />
@@ -1505,7 +1683,7 @@ export default function ComprasPage() {
 
                           <div>
                             <label className="mb-2 block text-xs font-bold text-gray-600">
-                              Precio unitario
+                              Costo unitario
                             </label>
 
                             <div className="relative">
@@ -1524,48 +1702,114 @@ export default function ComprasPage() {
                             </div>
                           </div>
 
+                          <div>
+                            <label className="mb-2 flex items-center gap-1.5 text-xs font-bold text-gray-600">
+                              <Percent size={13} />
+                              Margen de venta
+                            </label>
+
+                            <div className="relative">
+                              <input
+                                type="number"
+                                id="margen-input"
+                                placeholder="Ej. 20"
+                                min="0"
+                                step="0.1"
+                                defaultValue="20"
+                                className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 pr-10 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#18a66b] focus:bg-white focus:ring-4 focus:ring-[#18a66b]/10"
+                              />
+
+                              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-gray-400">
+                                %
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <div className="rounded-2xl border border-[#bcebd5] bg-[#f7fcf9] p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b]">
+                                  <DollarSign size={18} />
+                                </div>
+
+                                <div>
+                                  <p className="text-xs font-black uppercase tracking-wider text-[#148f5c]">
+                                    Precio de venta
+                                  </p>
+
+                                  <p
+                                    id="precio-venta-preview"
+                                    className="mt-1 text-2xl font-black text-[#148f5c]"
+                                  >
+                                    USD 0,00
+                                  </p>
+
+                                  <p className="mt-1 text-[11px] text-gray-500">
+                                    Se calcula automáticamente:
+                                    costo + margen.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
                           <button
                             type="button"
                             onClick={() => {
+                              const productoSelect =
+                                document.getElementById(
+                                  "producto-select"
+                                ) as HTMLSelectElement;
+
+                              const nombreInput =
+                                document.getElementById(
+                                  "producto-nombre"
+                                ) as HTMLInputElement;
+
+                              const categoriaInput =
+                                document.getElementById(
+                                  "producto-categoria"
+                                ) as HTMLSelectElement;
+
+                              const cantidadInput =
+                                document.getElementById(
+                                  "cantidad-input"
+                                ) as HTMLInputElement;
+
+                              const precioInput =
+                                document.getElementById(
+                                  "precio-input"
+                                ) as HTMLInputElement;
+
+                              const margenInput =
+                                document.getElementById(
+                                  "margen-input"
+                                ) as HTMLInputElement;
+
                               const productoId =
                                 Number(
-                                  (
-                                    document.getElementById(
-                                      "producto-select"
-                                    ) as HTMLSelectElement
-                                  )?.value
+                                  productoSelect?.value
                                 ) || null;
 
                               const productoNombre =
-                                (
-                                  document.getElementById(
-                                    "producto-nombre"
-                                  ) as HTMLInputElement
-                                )?.value || "";
+                                nombreInput?.value || "";
 
                               const categoria =
-                                (
-                                  document.getElementById(
-                                    "producto-categoria"
-                                  ) as HTMLSelectElement
-                                )?.value || "";
+                                categoriaInput?.value || "";
 
                               const cantidad =
                                 Number(
-                                  (
-                                    document.getElementById(
-                                      "cantidad-input"
-                                    ) as HTMLInputElement
-                                  )?.value
+                                  cantidadInput?.value
                                 );
 
-                              const precio =
+                              const costo =
                                 Number(
-                                  (
-                                    document.getElementById(
-                                      "precio-input"
-                                    ) as HTMLInputElement
-                                  )?.value
+                                  precioInput?.value
+                                );
+
+                              const margen =
+                                Number(
+                                  margenInput?.value
                                 );
 
                               if (
@@ -1579,11 +1823,21 @@ export default function ComprasPage() {
                               }
 
                               if (
-                                precio < 0 ||
-                                !Number.isFinite(precio)
+                                !Number.isFinite(costo) ||
+                                costo < 0
                               ) {
                                 setError(
-                                  "Completa un precio válido"
+                                  "Completa un costo de compra válido"
+                                );
+                                return;
+                              }
+
+                              if (
+                                !Number.isFinite(margen) ||
+                                margen < 0
+                              ) {
+                                setError(
+                                  "Completa un margen válido"
                                 );
                                 return;
                               }
@@ -1621,6 +1875,15 @@ export default function ComprasPage() {
                                 )?.nombre ||
                                 "";
 
+                              const precioVenta =
+                                Number(
+                                  (
+                                    costo *
+                                    (1 +
+                                      margen / 100)
+                                  ).toFixed(2)
+                                );
+
                               setDetalles((prev) => [
                                 ...prev,
                                 {
@@ -1633,39 +1896,31 @@ export default function ComprasPage() {
                                     "OTROS",
                                   cantidad,
                                   precio_unitario:
-                                    precio,
+                                    costo,
+                                  margen,
+                                  precio_venta:
+                                    precioVenta,
                                 },
                               ]);
 
-                              (
-                                document.getElementById(
-                                  "producto-select"
-                                ) as HTMLSelectElement
-                              ).value = "";
+                              productoSelect.value =
+                                "";
 
-                              (
-                                document.getElementById(
-                                  "producto-nombre"
-                                ) as HTMLInputElement
-                              ).value = "";
+                              nombreInput.value = "";
+                              categoriaInput.value = "";
+                              cantidadInput.value = "";
+                              precioInput.value = "";
+                              margenInput.value = "20";
 
-                              (
+                              const preview =
                                 document.getElementById(
-                                  "producto-categoria"
-                                ) as HTMLSelectElement
-                              ).value = "";
+                                  "precio-venta-preview"
+                                );
 
-                              (
-                                document.getElementById(
-                                  "cantidad-input"
-                                ) as HTMLInputElement
-                              ).value = "";
-
-                              (
-                                document.getElementById(
-                                  "precio-input"
-                                ) as HTMLInputElement
-                              ).value = "";
+                              if (preview) {
+                                preview.textContent =
+                                  "USD 0,00";
+                              }
 
                               setError("");
                             }}
@@ -1717,11 +1972,7 @@ export default function ComprasPage() {
                           </span>
 
                           <span className="text-sm font-black text-gray-950">
-                            {detalles.reduce(
-                              (sum, detalle) =>
-                                sum + detalle.cantidad,
-                              0
-                            )}
+                            {totalUnidades}
                           </span>
                         </div>
 
@@ -1735,11 +1986,15 @@ export default function ComprasPage() {
                             />
 
                             <p className="text-[11px] leading-5 text-gray-500">
-                              La orden quedará como{" "}
+                              Al guardar la orden, el{" "}
                               <span className="font-bold text-gray-700">
-                                pendiente
+                                costo
                               </span>{" "}
-                              hasta que registres la recepción.
+                              y el{" "}
+                              <span className="font-bold text-gray-700">
+                                precio de venta
+                              </span>{" "}
+                              quedarán actualizados en Inventario.
                             </p>
                           </div>
                         </div>
@@ -1790,9 +2045,7 @@ export default function ComprasPage() {
         </div>
       )}
 
-      {/* ===================================================== */}
       {/* MODAL PROVEEDOR */}
-      {/* ===================================================== */}
 
       {mostrarNuevoProveedor && (
         <Modal
@@ -1931,9 +2184,7 @@ export default function ComprasPage() {
         </Modal>
       )}
 
-      {/* ===================================================== */}
       {/* MODAL RECIBIR ORDEN */}
-      {/* ===================================================== */}
 
       {ordenSeleccionada && (
         <Modal
@@ -2000,7 +2251,7 @@ export default function ComprasPage() {
                           </p>
 
                           <p className="mt-1 text-xs text-gray-500">
-                            Precio unitario:{" "}
+                            Costo unitario:{" "}
                             {moneda(
                               detalle.precio_unitario
                             )}
@@ -2062,6 +2313,14 @@ export default function ComprasPage() {
                   )
                 )}
               </div>
+            </div>
+
+            <div className="rounded-xl bg-[#f7fcf9] p-3">
+              <p className="text-[11px] leading-5 text-gray-500">
+                El costo y precio de venta ya fueron guardados
+                al crear la compra. Al confirmar la recepción,
+                solamente se actualizará el stock.
+              </p>
             </div>
 
             <div className="flex justify-end gap-2 border-t border-gray-100 pt-5">
