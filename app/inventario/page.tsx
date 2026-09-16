@@ -125,6 +125,7 @@ export default function InventarioPage() {
     modelo: "",
     sku: "",
     costo: "",
+    margen: "",
     precio: "",
     stock: "0",
     stockMinimo: "0",
@@ -138,6 +139,7 @@ export default function InventarioPage() {
     modelo: "",
     sku: "",
     costo: "",
+    margen: "",
     precio: "",
     stockMinimo: "",
     descripcion: "",
@@ -170,6 +172,45 @@ export default function InventarioPage() {
   useEffect(() => {
     void cargarProductos();
   }, []);
+
+  /*
+    =====================================================
+    PRECIO AUTOMÁTICO
+    =====================================================
+
+    Precio = Costo × (1 + Margen / 100)
+  */
+
+  const calcularPrecio = (
+    costo: string,
+    margen: string
+  ) => {
+    const costoNumero = Math.max(
+      0,
+      Number(costo) || 0
+    );
+
+    const margenNumero = Math.max(
+      0,
+      Number(margen) || 0
+    );
+
+    return costoNumero * (1 + margenNumero / 100);
+  };
+
+  const precioNuevoCalculado = useMemo(() => {
+    return calcularPrecio(
+      nuevo.costo,
+      nuevo.margen
+    );
+  }, [nuevo.costo, nuevo.margen]);
+
+  const precioEditadoCalculado = useMemo(() => {
+    return calcularPrecio(
+      editado.costo,
+      editado.margen
+    );
+  }, [editado.costo, editado.margen]);
 
   const productosFiltrados = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -313,6 +354,13 @@ export default function InventarioPage() {
   const abrirEditar = (producto: Producto) => {
     setProductoSeleccionado(producto);
 
+    const margenActual =
+      producto.costo > 0
+        ? ((producto.precio - producto.costo) /
+            producto.costo) *
+          100
+        : 0;
+
     setEditado({
       nombre: producto.nombre,
       categoria: producto.categoria ?? "",
@@ -320,6 +368,7 @@ export default function InventarioPage() {
       modelo: producto.modelo ?? "",
       sku: producto.sku ?? "",
       costo: String(producto.costo),
+      margen: margenActual.toFixed(2),
       precio: String(producto.precio),
       stockMinimo: String(
         producto.stock_minimo
@@ -328,10 +377,6 @@ export default function InventarioPage() {
         producto.descripcion ?? "",
     });
 
-    /* IMPORTANTE:
-       Si el producto ya tiene foto,
-       mostramos esa foto.
-    */
     setFotoEdicion(null);
     setVistaPreviaEdicion(
       producto.image_url ?? ""
@@ -384,9 +429,14 @@ export default function InventarioPage() {
       Number(nuevo.costo) || 0
     );
 
+    const margen = Math.max(
+      0,
+      Number(nuevo.margen) || 0
+    );
+
     const precio = Math.max(
       0,
-      Number(nuevo.precio) || 0
+      costo * (1 + margen / 100)
     );
 
     setGuardandoProducto(true);
@@ -506,6 +556,7 @@ export default function InventarioPage() {
       modelo: "",
       sku: "",
       costo: "",
+      margen: "",
       precio: "",
       stock: "0",
       stockMinimo: "0",
@@ -544,9 +595,14 @@ export default function InventarioPage() {
       Number(editado.costo) || 0
     );
 
+    const margen = Math.max(
+      0,
+      Number(editado.margen) || 0
+    );
+
     const precio = Math.max(
       0,
-      Number(editado.precio) || 0
+      costo * (1 + margen / 100)
     );
 
     const stockMinimo = Math.max(
@@ -554,10 +610,6 @@ export default function InventarioPage() {
       Number(editado.stockMinimo) || 0
     );
 
-    /*
-      Solo subimos una foto si el usuario
-      seleccionó una nueva.
-    */
     let imageUrl =
       productoSeleccionado.image_url;
 
@@ -623,11 +675,6 @@ export default function InventarioPage() {
           descripcion:
             editado.descripcion.trim() ||
             null,
-
-          /*
-            ESTE ES EL ÚNICO CAMPO NUEVO
-            relacionado con la foto.
-          */
           image_url: imageUrl,
         })
         .eq(
@@ -902,14 +949,14 @@ export default function InventarioPage() {
   const margenProducto = (
     producto: Producto
   ) => {
-    if (producto.precio <= 0) {
+    if (producto.costo <= 0) {
       return 0;
     }
 
     return (
       ((producto.precio -
         producto.costo) /
-        producto.precio) *
+        producto.costo) *
       100
     );
   };
@@ -2188,21 +2235,51 @@ export default function InventarioPage() {
                   }
                 />
 
+                {/* MARGEN MANUAL */}
+
                 <Field
-                  label="Precio (USD)"
+                  label="Margen (%)"
                   type="number"
                   min="0"
                   step="0.01"
                   value={
-                    editado.precio
+                    editado.margen
                   }
                   onChange={(value) =>
                     setEditado({
                       ...editado,
-                      precio: value,
+                      margen: value,
                     })
                   }
+                  placeholder="Ej. 30"
                 />
+
+                {/* PRECIO AUTOMÁTICO */}
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-gray-600">
+                    Precio de venta (USD)
+                  </label>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={moneda(
+                        precioEditadoCalculado
+                      )}
+                      readOnly
+                      className="h-11 w-full rounded-xl border border-[#bcebd5] bg-[#e9f8f1] px-3 pr-24 text-sm font-black text-[#148f5c] outline-none"
+                    />
+
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wide text-[#18a66b] shadow-sm">
+                      Automático
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-[10px] text-gray-400">
+                    Costo + margen ingresado
+                  </p>
+                </div>
 
                 <Field
                   label="Stock mínimo"
@@ -2220,6 +2297,39 @@ export default function InventarioPage() {
                     })
                   }
                 />
+
+              </div>
+
+              <div className="rounded-xl bg-[#f8faf9] p-3">
+
+                <div className="flex items-center justify-between gap-4">
+
+                  <span className="text-xs font-bold text-gray-500">
+                    Precio calculado
+                  </span>
+
+                  <span className="text-lg font-black text-[#148f5c]">
+                    {moneda(
+                      precioEditadoCalculado
+                    )}
+                  </span>
+
+                </div>
+
+                <p className="mt-1 text-[10px] text-gray-400">
+                  {moneda(
+                    Number(
+                      editado.costo
+                    ) || 0
+                  )}{" "}
+                  de costo +{" "}
+                  {(
+                    Number(
+                      editado.margen
+                    ) || 0
+                  ).toFixed(2)}
+                  % de margen
+                </p>
 
               </div>
 
@@ -2475,22 +2585,51 @@ export default function InventarioPage() {
                 placeholder="0.00"
               />
 
+              {/* MARGEN MANUAL */}
+
               <Field
-                label="Precio (USD)"
+                label="Margen (%)"
                 type="number"
                 min="0"
                 step="0.01"
                 value={
-                  nuevo.precio
+                  nuevo.margen
                 }
                 onChange={(value) =>
                   setNuevo({
                     ...nuevo,
-                    precio: value,
+                    margen: value,
                   })
                 }
-                placeholder="0.00"
+                placeholder="Ej. 30"
               />
+
+              {/* PRECIO AUTOMÁTICO */}
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-gray-600">
+                  Precio de venta (USD)
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={moneda(
+                      precioNuevoCalculado
+                    )}
+                    readOnly
+                    className="h-11 w-full rounded-xl border border-[#bcebd5] bg-[#e9f8f1] px-3 pr-24 text-sm font-black text-[#148f5c] outline-none"
+                  />
+
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md bg-white px-2 py-1 text-[9px] font-black uppercase tracking-wide text-[#18a66b] shadow-sm">
+                    Automático
+                  </span>
+                </div>
+
+                <p className="mt-1 text-[10px] text-gray-400">
+                  Se calcula con el costo + margen
+                </p>
+              </div>
 
               <Field
                 label="Stock inicial"
@@ -2526,6 +2665,41 @@ export default function InventarioPage() {
                 }
                 placeholder="0"
               />
+
+            </div>
+
+            {/* RESUMEN DEL PRECIO */}
+
+            <div className="rounded-xl bg-[#f8faf9] p-3">
+
+              <div className="flex items-center justify-between gap-4">
+
+                <span className="text-xs font-bold text-gray-500">
+                  Precio de venta calculado
+                </span>
+
+                <span className="text-lg font-black text-[#148f5c]">
+                  {moneda(
+                    precioNuevoCalculado
+                  )}
+                </span>
+
+              </div>
+
+              <p className="mt-1 text-[10px] text-gray-400">
+                {moneda(
+                  Number(
+                    nuevo.costo
+                  ) || 0
+                )}{" "}
+                de costo +{" "}
+                {(
+                  Number(
+                    nuevo.margen
+                  ) || 0
+                ).toFixed(2)}
+                % de margen
+              </p>
 
             </div>
 
