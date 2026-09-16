@@ -25,7 +25,6 @@ import {
   Plus,
   Search,
   Settings2,
-  ShoppingCart,
   Trash2,
   X,
   Eye,
@@ -109,8 +108,15 @@ export default function InventarioPage() {
   const [guardandoStock, setGuardandoStock] =
     useState(false);
 
+  /* FOTO NUEVO PRODUCTO */
   const [foto, setFoto] = useState<File | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState("");
+
+  /* FOTO EDICIÓN */
+  const [fotoEdicion, setFotoEdicion] =
+    useState<File | null>(null);
+  const [vistaPreviaEdicion, setVistaPreviaEdicion] =
+    useState("");
 
   const [nuevo, setNuevo] = useState({
     nombre: "",
@@ -244,6 +250,10 @@ export default function InventarioPage() {
     };
   }, [productos]);
 
+  /* =====================================================
+     FOTO NUEVO PRODUCTO
+  ===================================================== */
+
   const seleccionarFoto = (
     event: ChangeEvent<HTMLInputElement>
   ) => {
@@ -259,10 +269,35 @@ export default function InventarioPage() {
     );
   };
 
+  /* =====================================================
+     FOTO EDICIÓN
+  ===================================================== */
+
+  const seleccionarFotoEdicion = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const archivo =
+      event.target.files?.[0] ?? null;
+
+    setFotoEdicion(archivo);
+
+    setVistaPreviaEdicion(
+      archivo
+        ? URL.createObjectURL(archivo)
+        : ""
+    );
+  };
+
   const cerrarNuevo = () => {
     setMostrarNuevo(false);
     setFoto(null);
     setVistaPrevia("");
+  };
+
+  const cerrarEditar = () => {
+    setMostrarEditar(false);
+    setFotoEdicion(null);
+    setVistaPreviaEdicion("");
   };
 
   const abrirVer = (producto: Producto) => {
@@ -293,6 +328,15 @@ export default function InventarioPage() {
         producto.descripcion ?? "",
     });
 
+    /* IMPORTANTE:
+       Si el producto ya tiene foto,
+       mostramos esa foto.
+    */
+    setFotoEdicion(null);
+    setVistaPreviaEdicion(
+      producto.image_url ?? ""
+    );
+
     setMostrarGestion(false);
     setMostrarEditar(true);
   };
@@ -308,6 +352,10 @@ export default function InventarioPage() {
 
     setMostrarGestion(false);
   };
+
+  /* =====================================================
+     CREAR PRODUCTO
+  ===================================================== */
 
   const guardarProducto = async (
     event: FormEvent<HTMLFormElement>
@@ -471,6 +519,11 @@ export default function InventarioPage() {
     );
   };
 
+  /* =====================================================
+     EDITAR PRODUCTO
+     INCLUYE CAMBIO DE FOTO
+  ===================================================== */
+
   const guardarEdicion = async (
     event: FormEvent<HTMLFormElement>
   ) => {
@@ -501,6 +554,51 @@ export default function InventarioPage() {
       Number(editado.stockMinimo) || 0
     );
 
+    /*
+      Solo subimos una foto si el usuario
+      seleccionó una nueva.
+    */
+    let imageUrl =
+      productoSeleccionado.image_url;
+
+    if (fotoEdicion) {
+      const extension =
+        fotoEdicion.name
+          .split(".")
+          .pop()
+          ?.toLowerCase() || "jpg";
+
+      const nombreArchivo = `${TALLER_ID}/${crypto.randomUUID()}.${extension}`;
+
+      const { error: errorUpload } =
+        await supabase.storage
+          .from("recepcion-fotos")
+          .upload(
+            nombreArchivo,
+            fotoEdicion,
+            {
+              cacheControl: "3600",
+              upsert: false,
+              contentType:
+                fotoEdicion.type,
+            }
+          );
+
+      if (errorUpload) {
+        setError(
+          `No se pudo subir la foto: ${errorUpload.message}`
+        );
+        setGuardandoProducto(false);
+        return;
+      }
+
+      imageUrl =
+        supabase.storage
+          .from("recepcion-fotos")
+          .getPublicUrl(nombreArchivo)
+          .data.publicUrl;
+    }
+
     const { data, error } =
       await supabase
         .from("productos")
@@ -525,8 +623,17 @@ export default function InventarioPage() {
           descripcion:
             editado.descripcion.trim() ||
             null,
+
+          /*
+            ESTE ES EL ÚNICO CAMPO NUEVO
+            relacionado con la foto.
+          */
+          image_url: imageUrl,
         })
-        .eq("id", productoSeleccionado.id)
+        .eq(
+          "id",
+          productoSeleccionado.id
+        )
         .eq("taller_id", TALLER_ID)
         .select(selectProducto)
         .single();
@@ -557,6 +664,11 @@ export default function InventarioPage() {
       data as Producto
     );
 
+    setFotoEdicion(null);
+    setVistaPreviaEdicion(
+      data.image_url ?? ""
+    );
+
     setMostrarEditar(false);
     setGuardandoProducto(false);
 
@@ -564,6 +676,10 @@ export default function InventarioPage() {
       "Producto actualizado correctamente."
     );
   };
+
+  /* =====================================================
+     STOCK
+  ===================================================== */
 
   const guardarMovimientoStock = async () => {
     if (
@@ -685,6 +801,10 @@ export default function InventarioPage() {
         : "Salida registrada correctamente."
     );
   };
+
+  /* =====================================================
+     DESACTIVAR
+  ===================================================== */
 
   const desactivarProducto = async () => {
     if (!productoSeleccionado) {
@@ -1854,10 +1974,8 @@ export default function InventarioPage() {
         productoSeleccionado && (
           <Modal
             title="Editar producto"
-            onClose={() =>
-              setMostrarEditar(
-                false
-              )
+            onClose={
+              cerrarEditar
             }
           >
 
@@ -1867,6 +1985,97 @@ export default function InventarioPage() {
               }
               className="space-y-4"
             >
+
+              {/* FOTO DEL PRODUCTO */}
+
+              <div className="rounded-2xl border border-gray-200 bg-[#f8faf9] p-4">
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+
+                  <label className="group relative flex h-28 w-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-gray-200">
+
+                    {vistaPreviaEdicion ? (
+                      <img
+                        src={
+                          vistaPreviaEdicion
+                        }
+                        alt={
+                          productoSeleccionado.nombre
+                        }
+                        className="h-full w-full object-cover transition group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-1 text-gray-300">
+                        <ImagePlus
+                          size={28}
+                        />
+                        <span className="text-[9px] font-bold">
+                          Sin foto
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100">
+
+                      <div className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-black text-gray-700">
+                        <ImagePlus size={13} />
+                        Cambiar
+                      </div>
+
+                    </div>
+
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={
+                        seleccionarFotoEdicion
+                      }
+                      className="sr-only"
+                    />
+
+                  </label>
+
+                  <div className="min-w-0">
+
+                    <p className="text-xs font-black uppercase tracking-wider text-[#18a66b]">
+                      Foto del producto
+                    </p>
+
+                    <p className="mt-1 text-sm font-black text-gray-800">
+                      {fotoEdicion
+                        ? "Nueva foto seleccionada"
+                        : productoSeleccionado.image_url
+                        ? "Foto actual"
+                        : "Este producto no tiene foto"}
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-gray-400">
+                      Hacé clic en la imagen para
+                      agregar o cambiar la foto.
+                      JPG, PNG o WEBP.
+                    </p>
+
+                    {fotoEdicion && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFotoEdicion(null);
+                          setVistaPreviaEdicion(
+                            productoSeleccionado.image_url ??
+                              ""
+                          );
+                        }}
+                        className="mt-2 text-xs font-bold text-red-500 hover:text-red-600"
+                      >
+                        Cancelar nueva foto
+                      </button>
+                    )}
+
+                  </div>
+
+                </div>
+
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
 
@@ -2041,10 +2250,8 @@ export default function InventarioPage() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setMostrarEditar(
-                      false
-                    )
+                  onClick={
+                    cerrarEditar
                   }
                   className="rounded-xl px-4 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100"
                 >
