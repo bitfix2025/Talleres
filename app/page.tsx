@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -46,9 +47,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#f4f7f5] text-[#17201b]">
 
-      {/* =====================================================
-          MOBILE HEADER
-      ====================================================== */}
+      {/* MOBILE HEADER */}
 
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-gray-200/80 bg-white px-4 shadow-sm lg:hidden">
 
@@ -75,20 +74,14 @@ export default function Home() {
           onClick={() => setMenuAbierto(!menuAbierto)}
           className="rounded-xl p-2.5 text-gray-700 transition hover:bg-gray-100 active:scale-95"
         >
-          {menuAbierto ? (
-            <X size={21} />
-          ) : (
-            <Menu size={21} />
-          )}
+          {menuAbierto ? <X size={21} /> : <Menu size={21} />}
         </button>
 
       </header>
 
       <div className="flex min-h-screen">
 
-        {/* =====================================================
-            SIDEBAR
-        ====================================================== */}
+        {/* SIDEBAR */}
 
         <aside
           className={`
@@ -97,11 +90,7 @@ export default function Home() {
             shadow-2xl shadow-black/10
             transition-transform duration-200
             lg:sticky lg:top-0 lg:block lg:h-screen lg:translate-x-0
-            ${
-              menuAbierto
-                ? "translate-x-0"
-                : "-translate-x-full"
-            }
+            ${menuAbierto ? "translate-x-0" : "-translate-x-full"}
           `}
         >
 
@@ -180,9 +169,12 @@ export default function Home() {
                 onClick={() => irA("/compras")}
               />
 
+              {/* VENTAS */}
+
               <SidebarItem
                 icon={<DollarSign size={18} />}
                 label="Ventas"
+                onClick={() => irA("/ventas")}
               />
 
               <SidebarItem
@@ -250,9 +242,7 @@ export default function Home() {
           />
         )}
 
-        {/* =====================================================
-            CONTENIDO
-        ====================================================== */}
+        {/* CONTENIDO */}
 
         <section className="min-w-0 flex-1">
 
@@ -284,14 +274,9 @@ export default function Home() {
                 <input
                   type="text"
                   value={busqueda}
-                  onChange={(e) =>
-                    setBusqueda(e.target.value)
-                  }
+                  onChange={(e) => setBusqueda(e.target.value)}
                   onKeyDown={(e) => {
-                    if (
-                      e.key === "Enter" &&
-                      busqueda.trim()
-                    ) {
+                    if (e.key === "Enter" && busqueda.trim()) {
                       irA("/reparaciones");
                     }
                   }}
@@ -312,9 +297,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() =>
-                    setNotificacionesAbiertas(
-                      !notificacionesAbiertas
-                    )
+                    setNotificacionesAbiertas(!notificacionesAbiertas)
                   }
                   className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white transition hover:border-gray-300 hover:bg-gray-50 active:scale-95"
                 >
@@ -384,9 +367,7 @@ export default function Home() {
 
           </header>
 
-          {/* =====================================================
-              DASHBOARD
-          ====================================================== */}
+          {/* DASHBOARD */}
 
           <div className="mx-auto max-w-[1500px] p-5 md:p-8">
 
@@ -412,9 +393,7 @@ export default function Home() {
 
               <button
                 type="button"
-                onClick={() =>
-                  irA("/reparaciones/nueva")
-                }
+                onClick={() => irA("/reparaciones/nueva")}
                 className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#18a66b]/20 transition hover:bg-[#148f5c] active:scale-[0.98]"
               >
 
@@ -429,9 +408,7 @@ export default function Home() {
 
             </div>
 
-            {/* =====================================================
-                METRICAS
-            ====================================================== */}
+            {/* METRICAS */}
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
@@ -473,9 +450,7 @@ export default function Home() {
 
             </div>
 
-            {/* =====================================================
-                PRINCIPAL
-            ====================================================== */}
+            {/* PRINCIPAL */}
 
             <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
 
@@ -507,9 +482,7 @@ export default function Home() {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      irA("/reparaciones")
-                    }
+                    onClick={() => irA("/reparaciones")}
                     className="group inline-flex items-center gap-1 text-sm font-semibold text-gray-600 transition hover:text-[#18a66b]"
                   >
 
@@ -584,9 +557,7 @@ export default function Home() {
 
                             <button
                               type="button"
-                              onClick={() =>
-                                irA("/reparaciones/nueva")
-                              }
+                              onClick={() => irA("/reparaciones/nueva")}
                               className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#18a66b] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#148f5c] active:scale-95"
                             >
 
@@ -668,9 +639,7 @@ export default function Home() {
 
             </div>
 
-            {/* =====================================================
-                ACCIONES RAPIDAS
-            ====================================================== */}
+            {/* ACCIONES RAPIDAS */}
 
             <div className="mt-8">
 
@@ -692,9 +661,7 @@ export default function Home() {
                   icon={<Wrench size={20} />}
                   titulo="Nueva reparación"
                   descripcion="Recibir un iPhone"
-                  onClick={() =>
-                    irA("/reparaciones/nueva")
-                  }
+                  onClick={() => irA("/reparaciones/nueva")}
                 />
 
                 <QuickAction
@@ -719,9 +686,7 @@ export default function Home() {
 
             </div>
 
-            {/* =====================================================
-                RESUMEN
-            ====================================================== */}
+            {/* RESUMEN */}
 
             <div className="mt-8 grid gap-6 lg:grid-cols-2">
 
@@ -901,11 +866,7 @@ function SidebarItem({
       <span
         className={`
           transition-transform duration-150
-          ${
-            !activo
-              ? "group-hover:scale-110"
-              : ""
-          }
+          ${!activo ? "group-hover:scale-110" : ""}
         `}
       >
         {icon}

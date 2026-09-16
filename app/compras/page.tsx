@@ -1,3 +1,4 @@
+
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -16,6 +17,10 @@ import {
   Eye,
   CheckCircle2,
   Clock,
+  Package,
+  Building2,
+  CalendarDays,
+  ArrowUpRight,
 } from "lucide-react";
 
 const TALLER_ID = 1;
@@ -140,10 +145,16 @@ export default function ComprasPage() {
             id,
             nombre,
             email,
-            telefono
+            telefono,
+            direccion,
+            ciudad,
+            activo,
+            created_at,
+            taller_id
           ),
           detalles:ordenes_compra_detalles(
             id,
+            orden_id,
             producto_id,
             cantidad,
             precio_unitario,
@@ -292,12 +303,6 @@ export default function ComprasPage() {
     setError("");
 
     try {
-      /*
-       * =========================================================
-       * 1. GENERAR NÚMERO DE ORDEN
-       * =========================================================
-       */
-
       const { data: ultimaOrden, error: errorUltimaOrden } =
         await supabase
           .from("ordenes_compra")
@@ -322,24 +327,12 @@ export default function ComprasPage() {
         numeroActual + 1
       ).padStart(5, "0")}`;
 
-      /*
-       * =========================================================
-       * 2. CALCULAR TOTAL
-       * =========================================================
-       */
-
       const total = detalles.reduce(
         (sum, detalle) =>
           sum +
           detalle.cantidad * detalle.precio_unitario,
         0
       );
-
-      /*
-       * =========================================================
-       * 3. CREAR ORDEN
-       * =========================================================
-       */
 
       const { data: orden, error: errorOrden } =
         await supabase
@@ -369,20 +362,6 @@ export default function ComprasPage() {
         );
       }
 
-      /*
-       * =========================================================
-       * 4. RESOLVER PRODUCTOS
-       *
-       * Si existe -> usamos su ID.
-       *
-       * Si es nuevo -> lo creamos en productos.
-       *
-       * IMPORTANTE:
-       * productoId queda convertido explícitamente a number
-       * antes de insertarlo en ordenes_compra_detalles.
-       * =========================================================
-       */
-
       const filasDetalles: {
         orden_id: number;
         producto_id: number;
@@ -396,9 +375,6 @@ export default function ComprasPage() {
         let productoId: number | null =
           detalle.producto_id;
 
-        /*
-         * PRODUCTO NUEVO
-         */
         if (productoId === null) {
           const nombreNuevo =
             detalle.producto_nombre.trim();
@@ -452,14 +428,12 @@ export default function ComprasPage() {
           );
         }
 
-        /*
-         * SEGURIDAD EXTRA:
-         * En este punto productoId tiene que ser un número.
-         */
-
         const productoIdFinal = Number(productoId);
 
-        if (!Number.isFinite(productoIdFinal) || productoIdFinal <= 0) {
+        if (
+          !Number.isFinite(productoIdFinal) ||
+          productoIdFinal <= 0
+        ) {
           throw new Error(
             `ID de producto inválido para "${detalle.producto_nombre}".`
           );
@@ -477,29 +451,16 @@ export default function ComprasPage() {
         });
       }
 
-      /*
-       * =========================================================
-       * 5. CREAR DETALLES
-       * =========================================================
-       */
-
-      const {
-        error: errorDetalles,
-      } = await supabase
-        .from("ordenes_compra_detalles")
-        .insert(filasDetalles);
+      const { error: errorDetalles } =
+        await supabase
+          .from("ordenes_compra_detalles")
+          .insert(filasDetalles);
 
       if (errorDetalles) {
         throw new Error(
           `Error creando detalles de la orden: ${errorDetalles.message}`
         );
       }
-
-      /*
-       * =========================================================
-       * 6. RECARGAR TODO
-       * =========================================================
-       */
 
       await cargarDatos();
 
@@ -602,22 +563,33 @@ export default function ComprasPage() {
     const totalGastado = ordenes
       .filter((o) => o.estado === "RECIBIDA")
       .reduce(
-        (sum, o) => sum + o.total,
+        (sum, o) => sum + Number(o.total || 0),
         0
       );
+
+    const totalOrdenes = ordenes.length;
 
     return {
       pendientes,
       recibidas,
       totalGastado,
+      totalOrdenes,
     };
   }, [ordenes]);
+
+  const totalNuevaOrden = detalles.reduce(
+    (sum, detalle) =>
+      sum +
+      detalle.cantidad *
+        detalle.precio_unitario,
+    0
+  );
 
   if (cargando) {
     return (
       <main className="min-h-screen bg-[#f4f7f5]">
         <div className="flex min-h-screen items-center justify-center">
-          <div className="flex items-center gap-3 text-sm font-semibold text-gray-500">
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm font-semibold text-gray-500 shadow-sm">
             <Loader2
               size={20}
               className="animate-spin text-[#18a66b]"
@@ -633,20 +605,20 @@ export default function ComprasPage() {
     <main className="min-h-screen bg-[#f4f7f5] text-[#17201b]">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
 
-        {/* HEADER */}
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#18a66b]">
-              Gestión
-            </p>
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#18a66b]">
+              <ShoppingCart size={14} />
+              Gestión de compras
+            </div>
 
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-gray-950">
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-gray-950 sm:text-4xl">
               Compras
             </h1>
 
-            <p className="mt-2 text-sm text-gray-500">
-              Órdenes de compra y gestión de proveedores.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
+              Administra órdenes de compra, recepción de mercadería
+              y proveedores desde un solo lugar.
             </p>
           </div>
 
@@ -657,7 +629,7 @@ export default function ComprasPage() {
                 setError("");
                 setMostrarNuevaOrden(true);
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#148f5c] active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#148f5c] active:scale-[0.98]"
             >
               <Plus size={17} />
               Nueva orden
@@ -667,10 +639,11 @@ export default function ComprasPage() {
           {tab === "proveedores" && (
             <button
               type="button"
-              onClick={() =>
-                setMostrarNuevoProveedor(true)
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#148f5c] active:scale-[0.98]"
+              onClick={() => {
+                setError("");
+                setMostrarNuevoProveedor(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#148f5c] active:scale-[0.98]"
             >
               <Plus size={17} />
               Nuevo proveedor
@@ -679,7 +652,8 @@ export default function ComprasPage() {
         </div>
 
         {mensaje && (
-          <div className="fixed right-4 top-5 z-[100] rounded-xl bg-[#18a66b] px-5 py-3 text-sm font-bold text-white shadow-xl">
+          <div className="fixed right-4 top-5 z-[100] flex items-center gap-2 rounded-xl bg-[#18a66b] px-5 py-3 text-sm font-bold text-white shadow-xl">
+            <CheckCircle2 size={17} />
             {mensaje}
           </div>
         )}
@@ -699,320 +673,365 @@ export default function ComprasPage() {
               type="button"
               onClick={() => setError("")}
               aria-label="Cerrar error"
+              className="rounded-lg p-1 hover:bg-red-100"
             >
               <X size={17} />
             </button>
           </div>
         )}
 
-        {/* TABS */}
-
-        <div className="mt-6 flex gap-2 border-b border-gray-200">
+        <div className="mt-7 flex gap-1 border-b border-gray-200">
           <button
             type="button"
             onClick={() => setTab("ordenes")}
-            className={`border-b-2 px-4 py-3 text-sm font-bold transition ${
+            className={`relative flex items-center gap-2 px-4 py-3 text-sm font-bold transition ${
               tab === "ordenes"
-                ? "border-[#18a66b] text-[#18a66b]"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "text-[#18a66b]"
+                : "text-gray-500 hover:text-gray-800"
             }`}
           >
-            <ShoppingCart
-              size={16}
-              className="mr-2 inline"
-            />
+            <ShoppingCart size={16} />
             Órdenes de compra
+
+            {tab === "ordenes" && (
+              <span className="absolute bottom-[-1px] left-0 right-0 h-0.5 rounded-full bg-[#18a66b]" />
+            )}
           </button>
 
           <button
             type="button"
             onClick={() => setTab("proveedores")}
-            className={`border-b-2 px-4 py-3 text-sm font-bold transition ${
+            className={`relative flex items-center gap-2 px-4 py-3 text-sm font-bold transition ${
               tab === "proveedores"
-                ? "border-[#18a66b] text-[#18a66b]"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "text-[#18a66b]"
+                : "text-gray-500 hover:text-gray-800"
             }`}
           >
-            <User
-              size={16}
-              className="mr-2 inline"
-            />
+            <User size={16} />
             Proveedores
+
+            {tab === "proveedores" && (
+              <span className="absolute bottom-[-1px] left-0 right-0 h-0.5 rounded-full bg-[#18a66b]" />
+            )}
           </button>
         </div>
 
-        {/* ORDENES */}
-
         {tab === "ordenes" && (
           <>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                icon={<ShoppingCart size={18} />}
+                label="Total de órdenes"
+                value={String(estadisticas.totalOrdenes)}
+                helper="Órdenes registradas"
+                iconClass="bg-[#e9f8f1] text-[#18a66b]"
+              />
 
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-100 text-yellow-600">
-                  <Clock size={16} />
-                </div>
+              <StatCard
+                icon={<Clock size={18} />}
+                label="Pendientes"
+                value={String(estadisticas.pendientes)}
+                helper="Esperando recepción"
+                iconClass="bg-amber-50 text-amber-600"
+              />
 
-                <p className="mt-4 text-xs font-semibold text-gray-400">
-                  Pendientes
-                </p>
+              <StatCard
+                icon={<CheckCircle2 size={18} />}
+                label="Recibidas"
+                value={String(estadisticas.recibidas)}
+                helper="Órdenes completadas"
+                iconClass="bg-green-50 text-green-600"
+              />
 
-                <p className="mt-1 text-2xl font-black tracking-tight text-gray-950">
-                  {estadisticas.pendientes}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-600">
-                  <CheckCircle2 size={16} />
-                </div>
-
-                <p className="mt-4 text-xs font-semibold text-gray-400">
-                  Recibidas
-                </p>
-
-                <p className="mt-1 text-2xl font-black tracking-tight text-gray-950">
-                  {estadisticas.recibidas}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                  <DollarSign size={16} />
-                </div>
-
-                <p className="mt-4 text-xs font-semibold text-gray-400">
-                  Total gastado
-                </p>
-
-                <p className="mt-1 text-2xl font-black tracking-tight text-gray-950">
-                  {moneda(
-                    estadisticas.totalGastado
-                  )}
-                </p>
-              </div>
-
+              <StatCard
+                icon={<DollarSign size={18} />}
+                label="Total gastado"
+                value={moneda(estadisticas.totalGastado)}
+                helper="Compras recibidas"
+                iconClass="bg-blue-50 text-blue-600"
+              />
             </div>
 
             <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-
-              <div className="border-b border-gray-100 p-5">
-
+              <div className="border-b border-gray-100 bg-white p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-base font-black text-gray-950">
+                      Órdenes de compra
+                    </h2>
 
-                  <div className="relative w-full lg:max-w-md">
-                    <Search
-                      size={17}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-
-                    <input
-                      value={busqueda}
-                      onChange={(e) =>
-                        setBusqueda(e.target.value)
-                      }
-                      placeholder="Buscar orden o proveedor..."
-                      className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] pl-10 pr-4 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-2 focus:ring-[#18a66b]/10"
-                    />
+                    <p className="mt-1 text-xs text-gray-400">
+                      Consulta y controla el estado de tus compras.
+                    </p>
                   </div>
 
-                  <div className="flex gap-2">
-                    {[
-                      ["TODAS", "Todas"],
-                      ["PENDIENTE", "Pendientes"],
-                      ["RECIBIDA", "Recibidas"],
-                    ].map(([valor, etiqueta]) => (
-                      <button
-                        key={valor}
-                        type="button"
-                        onClick={() =>
-                          setFiltro(
-                            valor as typeof filtro
-                          )
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="relative w-full sm:w-72">
+                      <Search
+                        size={17}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
+
+                      <input
+                        value={busqueda}
+                        onChange={(e) =>
+                          setBusqueda(e.target.value)
                         }
-                        className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold transition ${
-                          filtro === valor
-                            ? "bg-[#e9f8f1] text-[#148f5c]"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                        }`}
-                      >
-                        {etiqueta}
-                      </button>
-                    ))}
-                  </div>
+                        placeholder="Buscar orden o proveedor..."
+                        className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] pl-10 pr-4 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-2 focus:ring-[#18a66b]/10"
+                      />
+                    </div>
 
+                    <div className="flex rounded-xl bg-[#f4f7f5] p-1">
+                      {[
+                        ["TODAS", "Todas"],
+                        ["PENDIENTE", "Pendientes"],
+                        ["RECIBIDA", "Recibidas"],
+                      ].map(([valor, etiqueta]) => (
+                        <button
+                          key={valor}
+                          type="button"
+                          onClick={() =>
+                            setFiltro(
+                              valor as typeof filtro
+                            )
+                          }
+                          className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold transition ${
+                            filtro === valor
+                              ? "bg-white text-[#148f5c] shadow-sm"
+                              : "text-gray-500 hover:text-gray-800"
+                          }`}
+                        >
+                          {etiqueta}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {ordenesFiltradas.length === 0 ? (
-                <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center">
-
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e9f8f1]">
+                <div className="flex min-h-[360px] flex-col items-center justify-center px-6 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e9f8f1]">
                     <ShoppingCart
-                      size={24}
+                      size={28}
                       className="text-[#18a66b]"
                     />
                   </div>
 
-                  <h2 className="mt-4 text-sm font-bold text-gray-900">
-                    No hay órdenes
+                  <h2 className="mt-5 text-base font-black text-gray-900">
+                    No hay órdenes para mostrar
                   </h2>
 
-                  <p className="mt-1 max-w-sm text-xs leading-5 text-gray-400">
-                    Crea la primera orden de compra.
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-gray-400">
+                    {busqueda
+                      ? "No encontramos órdenes que coincidan con tu búsqueda."
+                      : "Crea tu primera orden de compra para comenzar a gestionar tus compras."}
                   </p>
 
+                  {!busqueda && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError("");
+                        setMostrarNuevaOrden(true);
+                      }}
+                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#148f5c]"
+                    >
+                      <Plus size={15} />
+                      Nueva orden
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
+                  {ordenesFiltradas.map((orden) => {
+                    const productosOrden =
+                      orden.detalles?.length || 0;
 
-                  {ordenesFiltradas.map((orden) => (
-                    <div
-                      key={orden.id}
-                      className="p-4 transition hover:bg-[#f8faf9]"
-                    >
-                      <div className="flex items-start justify-between gap-4">
+                    const pendiente =
+                      orden.estado === "PENDIENTE";
 
-                        <div className="min-w-0 flex-1">
-
-                          <div className="flex items-center gap-2">
-
-                            <h3 className="text-sm font-bold text-gray-950">
-                              {orden.numero}
-                            </h3>
-
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${
-                                orden.estado ===
-                                "PENDIENTE"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-green-100 text-green-700"
+                    return (
+                      <div
+                        key={orden.id}
+                        className="group p-5 transition hover:bg-[#fbfdfc]"
+                      >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="flex min-w-0 flex-1 items-start gap-4">
+                            <div
+                              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+                                pendiente
+                                  ? "bg-amber-50 text-amber-600"
+                                  : "bg-[#e9f8f1] text-[#18a66b]"
                               }`}
                             >
-                              {orden.estado ===
-                              "PENDIENTE" ? (
-                                <Clock size={12} />
+                              {pendiente ? (
+                                <Clock size={20} />
                               ) : (
-                                <CheckCircle2
-                                  size={12}
-                                />
+                                <CheckCircle2 size={20} />
                               )}
+                            </div>
 
-                              {orden.estado}
-                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-sm font-black text-gray-950">
+                                  {orden.numero}
+                                </h3>
 
+                                <StatusBadge
+                                  estado={orden.estado}
+                                />
+                              </div>
+
+                              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Building2 size={13} />
+                                  {orden.proveedor?.nombre ||
+                                    "Sin proveedor"}
+                                </span>
+
+                                <span className="inline-flex items-center gap-1.5">
+                                  <CalendarDays size={13} />
+                                  {new Date(
+                                    orden.fecha
+                                  ).toLocaleDateString(
+                                    "es-AR"
+                                  )}
+                                </span>
+
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Package size={13} />
+                                  {productosOrden}{" "}
+                                  {productosOrden === 1
+                                    ? "producto"
+                                    : "productos"}
+                                </span>
+                              </div>
+                            </div>
                           </div>
 
-                          <p className="mt-1 text-xs text-gray-500">
-                            {orden.proveedor?.nombre} •{" "}
-                            {new Date(
-                              orden.fecha
-                            ).toLocaleDateString(
-                              "es-AR"
+                          <div className="flex items-center justify-between gap-5 border-t border-gray-100 pt-4 lg:min-w-[280px] lg:border-t-0 lg:pt-0">
+                            <div className="text-left lg:text-right">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                Total
+                              </p>
+
+                              <p className="mt-1 text-lg font-black text-gray-950">
+                                {moneda(orden.total)}
+                              </p>
+                            </div>
+
+                            {pendiente ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOrdenSeleccionada(
+                                    orden
+                                  );
+
+                                  const inicial: Record<
+                                    number,
+                                    number
+                                  > = {};
+
+                                  orden.detalles?.forEach(
+                                    (detalle) => {
+                                      inicial[
+                                        detalle.id
+                                      ] =
+                                        detalle.cantidad;
+                                    }
+                                  );
+
+                                  setCantidadesRecibidas(
+                                    inicial
+                                  );
+                                }}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#148f5c]"
+                              >
+                                <Eye size={15} />
+                                Recibir
+                              </button>
+                            ) : (
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f4f7f5] text-gray-400">
+                                <ArrowUpRight size={17} />
+                              </div>
                             )}
-                          </p>
-
-                          <p className="mt-2 text-sm font-semibold text-gray-900">
-                            {moneda(orden.total)} •{" "}
-                            {orden.detalles?.length ||
-                              0}{" "}
-                            producto(s)
-                          </p>
-
+                          </div>
                         </div>
-
-                        {orden.estado ===
-                          "PENDIENTE" && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOrdenSeleccionada(
-                                orden
-                              );
-
-                              const inicial: Record<
-                                number,
-                                number
-                              > = {};
-
-                              orden.detalles?.forEach(
-                                (detalle) => {
-                                  inicial[
-                                    detalle.id
-                                  ] =
-                                    detalle.cantidad;
-                                }
-                              );
-
-                              setCantidadesRecibidas(
-                                inicial
-                              );
-                            }}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#18a66b] px-3 py-2 text-xs font-bold text-white hover:bg-[#148f5c]"
-                          >
-                            <Eye size={14} />
-                            Recibir
-                          </button>
-                        )}
-
                       </div>
-                    </div>
-                  ))}
-
+                    );
+                  })}
                 </div>
               )}
-
             </section>
           </>
         )}
 
-        {/* PROVEEDORES */}
-
         {tab === "proveedores" && (
           <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-
             <div className="border-b border-gray-100 p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-black text-gray-950">
+                    Proveedores
+                  </h2>
 
-              <div className="relative w-full">
-                <Search
-                  size={17}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Gestiona los proveedores utilizados en tus compras.
+                  </p>
+                </div>
 
-                <input
-                  value={busqueda}
-                  onChange={(e) =>
-                    setBusqueda(e.target.value)
-                  }
-                  placeholder="Buscar proveedor..."
-                  className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] pl-10 pr-4 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-2 focus:ring-[#18a66b]/10"
-                />
+                <div className="relative w-full sm:w-80">
+                  <Search
+                    size={17}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+
+                  <input
+                    value={busqueda}
+                    onChange={(e) =>
+                      setBusqueda(e.target.value)
+                    }
+                    placeholder="Buscar proveedor..."
+                    className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] pl-10 pr-4 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-2 focus:ring-[#18a66b]/10"
+                  />
+                </div>
               </div>
-
             </div>
 
             {proveedores.length === 0 ? (
-              <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center">
-
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e9f8f1]">
+              <div className="flex min-h-[360px] flex-col items-center justify-center px-6 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e9f8f1]">
                   <User
-                    size={24}
+                    size={28}
                     className="text-[#18a66b]"
                   />
                 </div>
 
-                <h2 className="mt-4 text-sm font-bold text-gray-900">
+                <h2 className="mt-5 text-base font-black text-gray-900">
                   No hay proveedores
                 </h2>
 
-                <p className="mt-1 max-w-sm text-xs leading-5 text-gray-400">
-                  Agrega el primer proveedor para
-                  crear órdenes de compra.
+                <p className="mt-2 max-w-sm text-sm leading-6 text-gray-400">
+                  Agrega el primer proveedor para comenzar
+                  a crear órdenes de compra.
                 </p>
 
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMostrarNuevoProveedor(true)
+                  }
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#148f5c]"
+                >
+                  <Plus size={15} />
+                  Nuevo proveedor
+                </button>
               </div>
             ) : (
-              <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-
+              <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
                 {proveedores
                   .filter(
                     (proveedor) =>
@@ -1026,445 +1045,703 @@ export default function ComprasPage() {
                   .map((proveedor) => (
                     <div
                       key={proveedor.id}
-                      className="rounded-xl border border-gray-200 bg-[#f8faf9] p-4 transition hover:border-[#18a66b]"
+                      className="group rounded-2xl border border-gray-200 bg-[#fbfdfc] p-5 transition hover:border-[#18a66b] hover:bg-white hover:shadow-sm"
                     >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b]">
+                          <Building2 size={19} />
+                        </div>
 
-                      <h3 className="text-sm font-bold text-gray-950">
+                        <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-600">
+                          ACTIVO
+                        </span>
+                      </div>
+
+                      <h3 className="mt-4 text-sm font-black text-gray-950">
                         {proveedor.nombre}
                       </h3>
 
-                      {proveedor.email && (
-                        <p className="mt-2 break-all text-xs text-gray-500">
-                          {proveedor.email}
-                        </p>
-                      )}
+                      <div className="mt-4 space-y-2">
+                        {proveedor.email && (
+                          <p className="flex items-start gap-2 break-all text-xs text-gray-500">
+                            <span className="mt-0.5 text-gray-400">
+                              ✉
+                            </span>
+                            {proveedor.email}
+                          </p>
+                        )}
 
-                      {proveedor.telefono && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          {proveedor.telefono}
-                        </p>
-                      )}
+                        {proveedor.telefono && (
+                          <p className="flex items-start gap-2 text-xs text-gray-500">
+                            <span className="mt-0.5 text-gray-400">
+                              ☎
+                            </span>
+                            {proveedor.telefono}
+                          </p>
+                        )}
 
-                      {proveedor.ciudad && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          {proveedor.ciudad}
-                        </p>
-                      )}
-
+                        {proveedor.ciudad && (
+                          <p className="flex items-start gap-2 text-xs text-gray-500">
+                            <span className="mt-0.5 text-gray-400">
+                              ●
+                            </span>
+                            {proveedor.ciudad}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   ))}
-
               </div>
             )}
-
           </section>
         )}
       </div>
 
       {/* ===================================================== */}
-      {/* MODAL NUEVA ORDEN */}
+      {/* MODAL NUEVA ORDEN — SOLO DISEÑO MODIFICADO */}
       {/* ===================================================== */}
 
       {mostrarNuevaOrden && (
-        <Modal
-          title="Nueva orden de compra"
-          onClose={() => {
-            setMostrarNuevaOrden(false);
-            setProveedorSeleccionado(null);
-            setDetalles([]);
-            setError("");
-          }}
-        >
-          <form
-            onSubmit={crearOrden}
-            className="space-y-4"
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5">
+          <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-gray-200 bg-[#f8faf9] shadow-2xl">
 
-            <div>
-              <label className="mb-1.5 block text-xs font-bold text-gray-600">
-                Proveedor *
-              </label>
+            {/* HEADER */}
 
-              <select
-                value={proveedorSeleccionado || ""}
-                onChange={(e) =>
-                  setProveedorSeleccionado(
-                    Number(e.target.value)
-                  )
-                }
-                className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
-              >
-                <option value="">
-                  Selecciona un proveedor
-                </option>
+            <div className="shrink-0 border-b border-gray-200 bg-white px-5 py-5 sm:px-7">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e9f8f1] text-[#18a66b]">
+                    <ShoppingCart size={22} />
+                  </div>
 
-                {proveedores.map((proveedor) => (
-                  <option
-                    key={proveedor.id}
-                    value={proveedor.id}
-                  >
-                    {proveedor.nombre}
-                  </option>
-                ))}
-              </select>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-xl font-black tracking-tight text-gray-950 sm:text-2xl">
+                        Nueva orden de compra
+                      </h2>
+
+                      <span className="rounded-full bg-[#e9f8f1] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#148f5c]">
+                        Nueva
+                      </span>
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-gray-500 sm:text-sm">
+                      Crea una orden, agrega los productos y define las cantidades que deseas solicitar.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMostrarNuevaOrden(false);
+                    setProveedorSeleccionado(null);
+                    setDetalles([]);
+                    setError("");
+                  }}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-400 transition hover:bg-gray-50 hover:text-gray-700"
+                  aria-label="Cerrar"
+                >
+                  <X size={19} />
+                </button>
+              </div>
             </div>
 
-            {/* DETALLES */}
+            {/* CONTENIDO */}
 
-            <div>
-              <label className="mb-1.5 block text-xs font-bold text-gray-600">
-                Productos
-              </label>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <form
+                onSubmit={crearOrden}
+                className="p-5 sm:p-7"
+              >
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
 
-              <div className="max-h-64 space-y-2 overflow-y-auto">
+                  {/* COLUMNA PRINCIPAL */}
 
-                {detalles.map(
-                  (detalle, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 rounded-lg border border-gray-200 bg-[#f8faf9] p-2"
-                    >
+                  <div className="space-y-6">
 
-                      <div className="min-w-0 flex-1">
+                    {/* PROVEEDOR */}
 
-                        <p className="text-xs font-semibold text-gray-900">
-                          {detalle.producto_nombre}
-                        </p>
+                    <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                      <div className="border-b border-gray-100 px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b]">
+                            <Building2 size={17} />
+                          </div>
 
-                        <p className="text-xs text-gray-500">
-                          {detalle.cantidad} x{" "}
-                          {moneda(
-                            detalle.precio_unitario
-                          )}{" "}
-                          ={" "}
-                          {moneda(
-                            detalle.cantidad *
-                              detalle.precio_unitario
-                          )}
-                        </p>
+                          <div>
+                            <h3 className="text-sm font-black text-gray-950">
+                              Proveedor
+                            </h3>
 
-                        {!detalle.producto_id && (
-                          <p className="mt-1 text-[10px] font-bold text-[#18a66b]">
-                            Producto nuevo •{" "}
-                            {detalle.categoria}
-                          </p>
-                        )}
-
+                            <p className="mt-0.5 text-xs text-gray-400">
+                              Selecciona quién suministra esta compra.
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setDetalles(
-                            detalles.filter(
-                              (_, i) =>
-                                i !== index
+                      <div className="p-5">
+                        <label className="mb-2 block text-xs font-bold text-gray-600">
+                          Proveedor de la orden
+                        </label>
+
+                        <select
+                          value={proveedorSeleccionado || ""}
+                          onChange={(e) =>
+                            setProveedorSeleccionado(
+                              Number(e.target.value)
                             )
-                          )
-                        }
-                        className="rounded p-1 text-red-600 hover:bg-red-100"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                          }
+                          className="h-12 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm font-medium text-gray-800 outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-4 focus:ring-[#18a66b]/10"
+                        >
+                          <option value="">
+                            Selecciona un proveedor
+                          </option>
 
+                          {proveedores.map((proveedor) => (
+                            <option
+                              key={proveedor.id}
+                              value={proveedor.id}
+                            >
+                              {proveedor.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </section>
+
+                    {/* PRODUCTOS */}
+
+                    <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                      <div className="flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-4">
+                        <div>
+                          <h3 className="text-sm font-black text-gray-950">
+                            Productos de la orden
+                          </h3>
+
+                          <p className="mt-0.5 text-xs text-gray-400">
+                            Productos y cantidades solicitadas.
+                          </p>
+                        </div>
+
+                        <span className="shrink-0 rounded-full bg-[#f4f7f5] px-3 py-1.5 text-[10px] font-black text-gray-500">
+                          {detalles.length}{" "}
+                          {detalles.length === 1
+                            ? "producto"
+                            : "productos"}
+                        </span>
+                      </div>
+
+                      <div className="p-5">
+                        {detalles.length === 0 ? (
+                          <div className="rounded-2xl border border-dashed border-gray-300 bg-[#fafcfb] px-5 py-10 text-center">
+                            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0f3f1] text-gray-400">
+                              <Package size={24} />
+                            </div>
+
+                            <p className="mt-4 text-sm font-black text-gray-700">
+                              Aún no hay productos
+                            </p>
+
+                            <p className="mx-auto mt-1 max-w-xs text-xs leading-5 text-gray-400">
+                              Agrega productos utilizando el formulario que aparece debajo.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {detalles.map(
+                              (detalle, index) => (
+                                <div
+                                  key={index}
+                                  className="group rounded-2xl border border-gray-200 bg-[#fbfdfc] p-4 transition hover:border-[#ccebdd] hover:bg-white"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b]">
+                                      <Package size={17} />
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                          <p className="truncate text-sm font-black text-gray-950">
+                                            {detalle.producto_nombre}
+                                          </p>
+
+                                          {detalle.producto_id ? (
+                                            <p className="mt-1 text-[11px] text-gray-400">
+                                              Producto del inventario
+                                            </p>
+                                          ) : (
+                                            <p className="mt-1 text-[11px] font-bold text-[#18a66b]">
+                                              Producto nuevo ·{" "}
+                                              {detalle.categoria}
+                                            </p>
+                                          )}
+                                        </div>
+
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setDetalles(
+                                              detalles.filter(
+                                                (_, i) =>
+                                                  i !== index
+                                              )
+                                            )
+                                          }
+                                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                                          aria-label="Eliminar producto"
+                                        >
+                                          <Trash2 size={15} />
+                                        </button>
+                                      </div>
+
+                                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                          <span className="rounded-lg bg-gray-100 px-2.5 py-1.5 font-bold">
+                                            {detalle.cantidad} unidades
+                                          </span>
+
+                                          <span>×</span>
+
+                                          <span className="font-semibold">
+                                            {moneda(
+                                              detalle.precio_unitario
+                                            )}
+                                          </span>
+                                        </div>
+
+                                        <p className="text-sm font-black text-gray-950">
+                                          {moneda(
+                                            detalle.cantidad *
+                                              detalle.precio_unitario
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    {/* AGREGAR PRODUCTO */}
+
+                    <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                      <div className="border-b border-gray-100 px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#f4f7f5] text-gray-600">
+                            <Plus size={17} />
+                          </div>
+
+                          <div>
+                            <h3 className="text-sm font-black text-gray-950">
+                              Agregar producto
+                            </h3>
+
+                            <p className="mt-0.5 text-xs text-gray-400">
+                              Selecciona un producto existente o crea uno nuevo.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-5">
+                        <div className="grid gap-4 sm:grid-cols-2">
+
+                          <div className="sm:col-span-2">
+                            <label className="mb-2 block text-xs font-bold text-gray-600">
+                              Producto del inventario
+                            </label>
+
+                            <select
+                              id="producto-select"
+                              className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-4 focus:ring-[#18a66b]/10"
+                            >
+                              <option value="">
+                                Seleccionar producto existente
+                              </option>
+
+                              {productos.map((producto) => (
+                                <option
+                                  key={producto.id}
+                                  value={producto.id}
+                                >
+                                  {producto.nombre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <div className="mb-2 flex items-center gap-2">
+                              <span className="text-xs font-bold text-gray-600">
+                                O crear producto nuevo
+                              </span>
+
+                              <span className="h-px flex-1 bg-gray-100" />
+                            </div>
+
+                            <input
+                              type="text"
+                              id="producto-nombre"
+                              placeholder="Nombre del producto nuevo"
+                              className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#18a66b] focus:bg-white focus:ring-4 focus:ring-[#18a66b]/10"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-xs font-bold text-gray-600">
+                              Categoría
+                            </label>
+
+                            <select
+                              id="producto-categoria"
+                              className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-4 focus:ring-[#18a66b]/10"
+                            >
+                              <option value="">
+                                Categoría / sector
+                              </option>
+                              <option value="Baterías">
+                                Baterías
+                              </option>
+                              <option value="Pantallas">
+                                Pantallas
+                              </option>
+                              <option value="Módulos">
+                                Módulos
+                              </option>
+                              <option value="Flex">
+                                Flex
+                              </option>
+                              <option value="Cámaras">
+                                Cámaras
+                              </option>
+                              <option value="Chasis">
+                                Chasis
+                              </option>
+                              <option value="Tapas traseras">
+                                Tapas traseras
+                              </option>
+                              <option value="Conectores">
+                                Conectores
+                              </option>
+                              <option value="IC / Componentes">
+                                IC / Componentes
+                              </option>
+                              <option value="Accesorios">
+                                Accesorios
+                              </option>
+                              <option value="Otros">
+                                Otros
+                              </option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-xs font-bold text-gray-600">
+                              Cantidad
+                            </label>
+
+                            <input
+                              type="number"
+                              id="cantidad-input"
+                              placeholder="Ej. 5"
+                              min="1"
+                              step="1"
+                              className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#18a66b] focus:bg-white focus:ring-4 focus:ring-[#18a66b]/10"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-xs font-bold text-gray-600">
+                              Precio unitario
+                            </label>
+
+                            <div className="relative">
+                              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                                USD
+                              </span>
+
+                              <input
+                                type="number"
+                                id="precio-input"
+                                placeholder="0.00"
+                                min="0"
+                                step="0.01"
+                                className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] pl-12 pr-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#18a66b] focus:bg-white focus:ring-4 focus:ring-[#18a66b]/10"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const productoId =
+                                Number(
+                                  (
+                                    document.getElementById(
+                                      "producto-select"
+                                    ) as HTMLSelectElement
+                                  )?.value
+                                ) || null;
+
+                              const productoNombre =
+                                (
+                                  document.getElementById(
+                                    "producto-nombre"
+                                  ) as HTMLInputElement
+                                )?.value || "";
+
+                              const categoria =
+                                (
+                                  document.getElementById(
+                                    "producto-categoria"
+                                  ) as HTMLSelectElement
+                                )?.value || "";
+
+                              const cantidad =
+                                Number(
+                                  (
+                                    document.getElementById(
+                                      "cantidad-input"
+                                    ) as HTMLInputElement
+                                  )?.value
+                                );
+
+                              const precio =
+                                Number(
+                                  (
+                                    document.getElementById(
+                                      "precio-input"
+                                    ) as HTMLInputElement
+                                  )?.value
+                                );
+
+                              if (
+                                !cantidad ||
+                                cantidad <= 0
+                              ) {
+                                setError(
+                                  "Completa una cantidad válida"
+                                );
+                                return;
+                              }
+
+                              if (
+                                precio < 0 ||
+                                !Number.isFinite(precio)
+                              ) {
+                                setError(
+                                  "Completa un precio válido"
+                                );
+                                return;
+                              }
+
+                              if (
+                                !productoId &&
+                                !productoNombre.trim()
+                              ) {
+                                setError(
+                                  "Selecciona un producto o ingresa un nombre"
+                                );
+                                return;
+                              }
+
+                              if (
+                                productoId &&
+                                detalles.some(
+                                  (detalle) =>
+                                    detalle.producto_id ===
+                                    productoId
+                                )
+                              ) {
+                                setError(
+                                  "Este producto ya está en la orden"
+                                );
+                                return;
+                              }
+
+                              const nombre =
+                                productoNombre.trim() ||
+                                productos.find(
+                                  (producto) =>
+                                    producto.id ===
+                                    productoId
+                                )?.nombre ||
+                                "";
+
+                              setDetalles((prev) => [
+                                ...prev,
+                                {
+                                  producto_id:
+                                    productoId,
+                                  producto_nombre:
+                                    nombre,
+                                  categoria:
+                                    categoria ||
+                                    "OTROS",
+                                  cantidad,
+                                  precio_unitario:
+                                    precio,
+                                },
+                              ]);
+
+                              (
+                                document.getElementById(
+                                  "producto-select"
+                                ) as HTMLSelectElement
+                              ).value = "";
+
+                              (
+                                document.getElementById(
+                                  "producto-nombre"
+                                ) as HTMLInputElement
+                              ).value = "";
+
+                              (
+                                document.getElementById(
+                                  "producto-categoria"
+                                ) as HTMLSelectElement
+                              ).value = "";
+
+                              (
+                                document.getElementById(
+                                  "cantidad-input"
+                                ) as HTMLInputElement
+                              ).value = "";
+
+                              (
+                                document.getElementById(
+                                  "precio-input"
+                                ) as HTMLInputElement
+                              ).value = "";
+
+                              setError("");
+                            }}
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 text-sm font-bold text-white transition hover:bg-gray-800 sm:mt-[25px]"
+                          >
+                            <Plus size={16} />
+                            Agregar producto
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+
+                  {/* RESUMEN LATERAL */}
+
+                  <aside className="lg:sticky lg:top-0 lg:self-start">
+                    <div className="overflow-hidden rounded-2xl border border-[#bcebd5] bg-white shadow-sm">
+
+                      <div className="bg-[#e9f8f1] px-5 py-5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#148f5c]">
+                          Resumen de compra
+                        </p>
+
+                        <p className="mt-2 text-3xl font-black tracking-tight text-[#148f5c]">
+                          {moneda(totalNuevaOrden)}
+                        </p>
+
+                        <p className="mt-1 text-xs text-[#4a8f72]">
+                          Total estimado de la orden
+                        </p>
+                      </div>
+
+                      <div className="space-y-4 p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs text-gray-500">
+                            Productos
+                          </span>
+
+                          <span className="text-sm font-black text-gray-950">
+                            {detalles.length}
+                          </span>
+                        </div>
+
+                        <div className="h-px bg-gray-100" />
+
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs text-gray-500">
+                            Unidades
+                          </span>
+
+                          <span className="text-sm font-black text-gray-950">
+                            {detalles.reduce(
+                              (sum, detalle) =>
+                                sum + detalle.cantidad,
+                              0
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="h-px bg-gray-100" />
+
+                        <div className="rounded-xl bg-[#f8faf9] p-3">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2
+                              size={15}
+                              className="mt-0.5 shrink-0 text-[#18a66b]"
+                            />
+
+                            <p className="text-[11px] leading-5 text-gray-500">
+                              La orden quedará como{" "}
+                              <span className="font-bold text-gray-700">
+                                pendiente
+                              </span>{" "}
+                              hasta que registres la recepción.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )
-                )}
+                  </aside>
+                </div>
 
-              </div>
-            </div>
+                {/* FOOTER */}
 
-            {/* AGREGAR PRODUCTO */}
-
-            <div className="grid gap-3 border-t border-gray-100 pt-4 sm:grid-cols-3">
-
-              <select
-                id="producto-select"
-                className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
-              >
-                <option value="">
-                  Producto inventario
-                </option>
-
-                {productos.map((producto) => (
-                  <option
-                    key={producto.id}
-                    value={producto.id}
+                <div className="mt-6 flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMostrarNuevaOrden(false);
+                      setProveedorSeleccionado(null);
+                      setDetalles([]);
+                      setError("");
+                    }}
+                    className="h-11 rounded-xl border border-gray-200 bg-white px-5 text-sm font-bold text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
                   >
-                    {producto.nombre}
-                  </option>
-                ))}
-              </select>
+                    Cancelar
+                  </button>
 
-              <input
-                type="text"
-                id="producto-nombre"
-                placeholder="O nombre nuevo"
-                className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
-              />
+                  <button
+                    disabled={
+                      guardandoOrden ||
+                      detalles.length === 0 ||
+                      !proveedorSeleccionado
+                    }
+                    type="submit"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-6 text-sm font-bold text-white shadow-sm transition hover:bg-[#148f5c] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {guardandoOrden && (
+                      <Loader2
+                        size={16}
+                        className="animate-spin"
+                      />
+                    )}
 
-              <select
-                id="producto-categoria"
-                className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
-              >
-                <option value="">
-                  Sector
-                </option>
-                <option value="Baterías">
-                  Baterías
-                </option>
-                <option value="Pantallas">
-                  Pantallas
-                </option>
-                <option value="Módulos">
-                  Módulos
-                </option>
-                <option value="Flex">
-                  Flex
-                </option>
-                <option value="Cámaras">
-                  Cámaras
-                </option>
-                <option value="Chasis">
-                  Chasis
-                </option>
-                <option value="Tapas traseras">
-                  Tapas traseras
-                </option>
-                <option value="Conectores">
-                  Conectores
-                </option>
-                <option value="IC / Componentes">
-                  IC / Componentes
-                </option>
-                <option value="Accesorios">
-                  Accesorios
-                </option>
-                <option value="Otros">
-                  Otros
-                </option>
-              </select>
-
-              <input
-                type="number"
-                id="cantidad-input"
-                placeholder="Cantidad"
-                min="1"
-                step="1"
-                className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
-              />
-
-              <input
-                type="number"
-                id="precio-input"
-                placeholder="Precio unit."
-                min="0"
-                step="0.01"
-                className="h-11 rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
-              />
-
-              <button
-                type="button"
-                onClick={() => {
-                  const productoId =
-                    Number(
-                      (
-                        document.getElementById(
-                          "producto-select"
-                        ) as HTMLSelectElement
-                      )?.value
-                    ) || null;
-
-                  const productoNombre =
-                    (
-                      document.getElementById(
-                        "producto-nombre"
-                      ) as HTMLInputElement
-                    )?.value || "";
-
-                  const categoria =
-                    (
-                      document.getElementById(
-                        "producto-categoria"
-                      ) as HTMLSelectElement
-                    )?.value || "";
-
-                  const cantidad =
-                    Number(
-                      (
-                        document.getElementById(
-                          "cantidad-input"
-                        ) as HTMLInputElement
-                      )?.value
-                    );
-
-                  const precio =
-                    Number(
-                      (
-                        document.getElementById(
-                          "precio-input"
-                        ) as HTMLInputElement
-                      )?.value
-                    );
-
-                  if (!cantidad || cantidad <= 0) {
-                    setError(
-                      "Completa una cantidad válida"
-                    );
-                    return;
-                  }
-
-                  if (
-                    precio < 0 ||
-                    !Number.isFinite(precio)
-                  ) {
-                    setError(
-                      "Completa un precio válido"
-                    );
-                    return;
-                  }
-
-                  if (
-                    !productoId &&
-                    !productoNombre.trim()
-                  ) {
-                    setError(
-                      "Selecciona un producto o ingresa un nombre"
-                    );
-                    return;
-                  }
-
-                  if (
-                    productoId &&
-                    detalles.some(
-                      (detalle) =>
-                        detalle.producto_id ===
-                        productoId
-                    )
-                  ) {
-                    setError(
-                      "Este producto ya está en la orden"
-                    );
-                    return;
-                  }
-
-                  const nombre =
-                    productoNombre.trim() ||
-                    productos.find(
-                      (producto) =>
-                        producto.id ===
-                        productoId
-                    )?.nombre ||
-                    "";
-
-                  setDetalles((prev) => [
-                    ...prev,
-                    {
-                      producto_id:
-                        productoId,
-                      producto_nombre:
-                        nombre,
-                      categoria:
-                        categoria || "OTROS",
-                      cantidad,
-                      precio_unitario:
-                        precio,
-                    },
-                  ]);
-
-                  (
-                    document.getElementById(
-                      "producto-select"
-                    ) as HTMLSelectElement
-                  ).value = "";
-
-                  (
-                    document.getElementById(
-                      "producto-nombre"
-                    ) as HTMLInputElement
-                  ).value = "";
-
-                  (
-                    document.getElementById(
-                      "producto-categoria"
-                    ) as HTMLSelectElement
-                  ).value = "";
-
-                  (
-                    document.getElementById(
-                      "cantidad-input"
-                    ) as HTMLInputElement
-                  ).value = "";
-
-                  (
-                    document.getElementById(
-                      "precio-input"
-                    ) as HTMLInputElement
-                  ).value = "";
-
-                  setError("");
-                }}
-                className="rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#148f5c] sm:col-span-2"
-              >
-                Agregar producto
-              </button>
-
+                    Crear orden de compra
+                    <ArrowUpRight size={15} />
+                  </button>
+                </div>
+              </form>
             </div>
-
-            {detalles.length > 0 && (
-              <div className="rounded-lg border border-[#bcebd5] bg-[#e9f8f1] p-3">
-                <p className="text-right text-sm font-bold text-[#148f5c]">
-                  Total:{" "}
-                  {moneda(
-                    detalles.reduce(
-                      (sum, detalle) =>
-                        sum +
-                        detalle.cantidad *
-                          detalle.precio_unitario,
-                      0
-                    )
-                  )}
-                </p>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarNuevaOrden(false);
-                  setProveedorSeleccionado(null);
-                  setDetalles([]);
-                  setError("");
-                }}
-                className="rounded-xl px-4 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100"
-              >
-                Cancelar
-              </button>
-
-              <button
-                disabled={
-                  guardandoOrden ||
-                  detalles.length === 0 ||
-                  !proveedorSeleccionado
-                }
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-              >
-                {guardandoOrden && (
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
-                )}
-
-                Crear orden
-              </button>
-
-            </div>
-          </form>
-        </Modal>
+          </div>
+        </div>
       )}
 
       {/* ===================================================== */}
@@ -1490,6 +1767,23 @@ export default function ComprasPage() {
             onSubmit={crearProveedor}
             className="space-y-4"
           >
+            <div className="rounded-2xl bg-[#f7fcf9] p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b]">
+                  <Building2 size={18} />
+                </div>
+
+                <div>
+                  <p className="text-sm font-black text-gray-950">
+                    Información del proveedor
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-400">
+                    Guarda los datos para utilizarlos en futuras compras.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <Field
               label="Nombre *"
@@ -1552,8 +1846,7 @@ export default function ComprasPage() {
               placeholder="Buenos Aires"
             />
 
-            <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
-
+            <div className="flex justify-end gap-2 border-t border-gray-100 pt-5">
               <button
                 type="button"
                 onClick={() => {
@@ -1575,7 +1868,7 @@ export default function ComprasPage() {
               <button
                 disabled={guardandoProveedor}
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
               >
                 {guardandoProveedor && (
                   <Loader2
@@ -1584,9 +1877,9 @@ export default function ComprasPage() {
                   />
                 )}
 
+                <Check size={16} />
                 Crear proveedor
               </button>
-
             </div>
           </form>
         </Modal>
@@ -1598,100 +1891,134 @@ export default function ComprasPage() {
 
       {ordenSeleccionada && (
         <Modal
-          title={`Recibir orden: ${ordenSeleccionada.numero}`}
+          title={`Recibir ${ordenSeleccionada.numero}`}
           onClose={() => {
             setOrdenSeleccionada(null);
             setCantidadesRecibidas({});
           }}
         >
-          <div className="space-y-4">
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-[#dcefe5] bg-[#f7fcf9] p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b]">
+                  <Package size={19} />
+                </div>
 
-            <div className="rounded-lg bg-[#f6f9f7] p-3">
-              <p className="text-sm font-bold text-gray-900">
-                {ordenSeleccionada.proveedor?.nombre}
-              </p>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-gray-950">
+                    {ordenSeleccionada.proveedor?.nombre}
+                  </p>
 
-              <p className="mt-1 text-xs text-gray-500">
-                {new Date(
-                  ordenSeleccionada.fecha
-                ).toLocaleDateString("es-AR")}
-              </p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays size={13} />
+                      {new Date(
+                        ordenSeleccionada.fecha
+                      ).toLocaleDateString("es-AR")}
+                    </span>
+
+                    <span className="inline-flex items-center gap-1.5">
+                      <DollarSign size={13} />
+                      {moneda(
+                        ordenSeleccionada.total
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="max-h-64 space-y-3 overflow-y-auto">
+            <div>
+              <div className="mb-3">
+                <h3 className="text-sm font-black text-gray-950">
+                  Confirmar recepción
+                </h3>
 
-              {ordenSeleccionada.detalles?.map(
-                (detalle) => (
-                  <div
-                    key={detalle.id}
-                    className="rounded-lg border border-gray-200 p-3"
-                  >
+                <p className="mt-1 text-xs text-gray-400">
+                  Revisa las cantidades antes de confirmar el ingreso.
+                </p>
+              </div>
 
-                    <p className="text-sm font-semibold text-gray-900">
-                      {detalle.producto?.nombre}
-                    </p>
+              <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+                {ordenSeleccionada.detalles?.map(
+                  (detalle) => (
+                    <div
+                      key={detalle.id}
+                      className="rounded-2xl border border-gray-200 bg-white p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-gray-950">
+                            {detalle.producto?.nombre ||
+                              "Producto"}
+                          </p>
 
-                    <p className="mt-1 text-xs text-gray-500">
-                      Precio:{" "}
-                      {moneda(
-                        detalle.precio_unitario
-                      )}
-                    </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Precio unitario:{" "}
+                            {moneda(
+                              detalle.precio_unitario
+                            )}
+                          </p>
+                        </div>
 
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-600">
-                          Solicitado
-                        </label>
-
-                        <p className="mt-1 text-sm font-bold text-gray-900">
-                          {detalle.cantidad}
+                        <p className="shrink-0 text-sm font-black text-gray-900">
+                          {moneda(
+                            detalle.subtotal
+                          )}
                         </p>
                       </div>
 
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-600">
-                          Recibido
-                        </label>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-xl bg-[#f4f7f5] p-3">
+                          <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                            Solicitado
+                          </label>
 
-                        <input
-                          type="number"
-                          min="0"
-                          max={detalle.cantidad}
-                          step="1"
-                          value={
-                            cantidadesRecibidas[
-                              detalle.id
-                            ] || 0
-                          }
-                          onChange={(e) =>
-                            setCantidadesRecibidas(
-                              {
-                                ...cantidadesRecibidas,
-                                [detalle.id]:
-                                  Math.min(
-                                    Number(
-                                      e.target.value
+                          <p className="mt-1 text-lg font-black text-gray-950">
+                            {detalle.cantidad}
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                            Recibido
+                          </label>
+
+                          <input
+                            type="number"
+                            min="0"
+                            max={detalle.cantidad}
+                            step="1"
+                            value={
+                              cantidadesRecibidas[
+                                detalle.id
+                              ] ?? 0
+                            }
+                            onChange={(e) =>
+                              setCantidadesRecibidas(
+                                {
+                                  ...cantidadesRecibidas,
+                                  [detalle.id]:
+                                    Math.min(
+                                      Number(
+                                        e.target.value
+                                      ),
+                                      detalle.cantidad
                                     ),
-                                    detalle.cantidad
-                                  ),
-                              }
-                            )
-                          }
-                          className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-[#f8faf9] px-2 text-sm outline-none focus:border-[#18a66b]"
-                        />
+                                }
+                              )
+                            }
+                            className="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold outline-none focus:border-[#18a66b] focus:ring-2 focus:ring-[#18a66b]/10"
+                          />
+                        </div>
                       </div>
-
                     </div>
-                  </div>
-                )
-              )}
-
+                  )
+                )}
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
-
+            <div className="flex justify-end gap-2 border-t border-gray-100 pt-5">
               <button
                 type="button"
                 onClick={() => {
@@ -1707,67 +2034,163 @@ export default function ComprasPage() {
                 disabled={guardandoRecepcion}
                 type="button"
                 onClick={recibirOrden}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#148f5c] disabled:opacity-60"
               >
-                {guardandoRecepcion && (
+                {guardandoRecepcion ? (
                   <Loader2
                     size={16}
                     className="animate-spin"
                   />
+                ) : (
+                  <Check size={16} />
                 )}
-
-                <Check size={16} />
 
                 Confirmar recepción
               </button>
-
             </div>
           </div>
         </Modal>
       )}
-
     </main>
   );
 }
+
+/* ========================================================= */
+/* COMPONENTE STAT CARD */
+/* ========================================================= */
+
+function StatCard({
+  icon,
+  label,
+  value,
+  helper,
+  iconClass,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  helper: string;
+  iconClass: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconClass}`}
+        >
+          {icon}
+        </div>
+
+        <ArrowUpRight
+          size={15}
+          className="text-gray-300"
+        />
+      </div>
+
+      <p className="mt-4 text-xs font-bold text-gray-400">
+        {label}
+      </p>
+
+      <p className="mt-1 truncate text-2xl font-black tracking-tight text-gray-950">
+        {value}
+      </p>
+
+      <p className="mt-1 text-[11px] text-gray-400">
+        {helper}
+      </p>
+    </div>
+  );
+}
+
+/* ========================================================= */
+/* STATUS BADGE */
+/* ========================================================= */
+
+function StatusBadge({
+  estado,
+}: {
+  estado: OrdenCompra["estado"];
+}) {
+  if (estado === "PENDIENTE") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">
+        <Clock size={11} />
+        PENDIENTE
+      </span>
+    );
+  }
+
+  if (estado === "RECIBIDA") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-black text-green-700">
+        <CheckCircle2 size={11} />
+        RECIBIDA
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-black text-red-700">
+      <X size={11} />
+      CANCELADA
+    </span>
+  );
+}
+
+/* ========================================================= */
+/* MODAL */
+/* ========================================================= */
 
 function Modal({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  wide?: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+      <div
+        className={`max-h-[92vh] w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl ${
+          wide ? "max-w-3xl" : "max-w-lg"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#18a66b]">
+              Gestión
+            </p>
 
-      <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-lg">
-
-        <div className="flex items-center justify-between border-b border-gray-100 p-5">
-
-          <h2 className="text-lg font-bold text-gray-950">
-            {title}
-          </h2>
+            <h2 className="mt-1 text-lg font-black text-gray-950">
+              {title}
+            </h2>
+          </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+            aria-label="Cerrar"
           >
             <X size={20} />
           </button>
-
         </div>
 
-        <div className="p-5">
+        <div className="max-h-[calc(92vh-90px)] overflow-y-auto p-5">
           {children}
         </div>
-
       </div>
     </div>
   );
 }
+
+/* ========================================================= */
+/* FIELD */
+/* ========================================================= */
 
 function Field({
   label,
@@ -1784,7 +2207,6 @@ function Field({
 }) {
   return (
     <div>
-
       <label className="mb-1.5 block text-xs font-bold text-gray-600">
         {label}
       </label>
@@ -1798,7 +2220,6 @@ function Field({
         placeholder={placeholder}
         className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none transition focus:border-[#18a66b] focus:bg-white focus:ring-2 focus:ring-[#18a66b]/10"
       />
-
     </div>
   );
 }
