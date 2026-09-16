@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -13,6 +14,7 @@ import {
   AlertCircle,
   ChevronRight,
   RefreshCw,
+  Home,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
@@ -99,10 +101,7 @@ export default function ReparacionesPage() {
         });
 
       if (error) {
-        console.error(
-          "ERROR CARGANDO REPARACIONES:",
-          error
-        );
+        console.error("ERROR CARGANDO REPARACIONES:", error);
 
         setError(
           error.message ||
@@ -119,32 +118,22 @@ export default function ReparacionesPage() {
           cliente_id: orden.cliente_id,
           equipo_id: orden.equipo_id,
           estado: orden.estado,
-          falla_reportada:
-            orden.falla_reportada,
-          observaciones:
-            orden.observaciones,
-          created_at:
-            orden.created_at,
+          falla_reportada: orden.falla_reportada,
+          observaciones: orden.observaciones,
+          created_at: orden.created_at,
 
-          cliente: Array.isArray(
-            orden.clientes
-          )
+          cliente: Array.isArray(orden.clientes)
             ? orden.clientes[0] || null
             : orden.clientes || null,
 
-          equipo: Array.isArray(
-            orden.equipos
-          )
+          equipo: Array.isArray(orden.equipos)
             ? orden.equipos[0] || null
             : orden.equipos || null,
         }));
 
       setOrdenes(ordenesFormateadas);
     } catch (error: any) {
-      console.error(
-        "ERROR CARGANDO REPARACIONES:",
-        error
-      );
+      console.error("ERROR CARGANDO REPARACIONES:", error);
 
       setError(
         error?.message ||
@@ -170,9 +159,7 @@ export default function ReparacionesPage() {
       )
       .filter(Boolean) as string[];
 
-    return Array.from(
-      new Set(lista)
-    ).sort();
+    return Array.from(new Set(lista)).sort();
   }, [ordenes]);
 
   /* =========================================
@@ -183,10 +170,7 @@ export default function ReparacionesPage() {
     return texto
       .toLowerCase()
       .normalize("NFD")
-      .replace(
-        /[\u0300-\u036f]/g,
-        ""
-      )
+      .replace(/[\u0300-\u036f]/g, "")
       .trim();
   };
 
@@ -195,9 +179,7 @@ export default function ReparacionesPage() {
   ========================================== */
 
   const ordenesFiltradas = useMemo(() => {
-    const texto = normalizar(
-      busqueda
-    );
+    const texto = normalizar(busqueda);
 
     return ordenes.filter((orden) => {
       const nombreCliente =
@@ -218,42 +200,25 @@ export default function ReparacionesPage() {
       const falla =
         orden.falla_reportada || "";
 
-      const idOrden =
-        String(orden.id);
+      const idOrden = String(orden.id);
 
       const coincideBusqueda =
         !texto ||
-        normalizar(
-          nombreCliente
-        ).includes(texto) ||
-        normalizar(
-          telefono
-        ).includes(texto) ||
-        normalizar(
-          modelo
-        ).includes(texto) ||
-        normalizar(
-          imei
-        ).includes(texto) ||
-        normalizar(
-          numeroSerie
-        ).includes(texto) ||
-        normalizar(
-          falla
-        ).includes(texto) ||
+        normalizar(nombreCliente).includes(texto) ||
+        normalizar(telefono).includes(texto) ||
+        normalizar(modelo).includes(texto) ||
+        normalizar(imei).includes(texto) ||
+        normalizar(numeroSerie).includes(texto) ||
+        normalizar(falla).includes(texto) ||
         idOrden.includes(texto);
 
-      const estado =
-        normalizar(
-          orden.estado || ""
-        );
+      const estado = normalizar(
+        orden.estado || ""
+      );
 
       const coincideEstado =
         estadoFiltro === "TODOS" ||
-        estado ===
-          normalizar(
-            estadoFiltro
-          );
+        estado === normalizar(estadoFiltro);
 
       const coincideModelo =
         modeloFiltro === "TODOS" ||
@@ -278,23 +243,20 @@ export default function ReparacionesPage() {
 
   const recibidos = ordenes.filter(
     (orden) =>
-      normalizar(
-        orden.estado || ""
-      ) === "recibido"
+      normalizar(orden.estado || "") ===
+      "recibido"
   ).length;
 
   const enReparacion = ordenes.filter(
     (orden) =>
-      normalizar(
-        orden.estado || ""
-      ) === "en reparacion"
+      normalizar(orden.estado || "") ===
+      "en reparacion"
   ).length;
 
   const reparados = ordenes.filter(
     (orden) =>
-      normalizar(
-        orden.estado || ""
-      ) === "reparado"
+      normalizar(orden.estado || "") ===
+      "reparado"
   ).length;
 
   const pendientesEntrega =
@@ -303,9 +265,7 @@ export default function ReparacionesPage() {
         orden.estado || ""
       );
 
-      return (
-        estado === "reparado"
-      );
+      return estado === "reparado";
     }).length;
 
   /* =========================================
@@ -318,9 +278,7 @@ export default function ReparacionesPage() {
     if (!fecha) return "-";
 
     try {
-      return new Date(
-        fecha
-      ).toLocaleDateString(
+      return new Date(fecha).toLocaleDateString(
         "es-AR",
         {
           day: "2-digit",
@@ -344,21 +302,15 @@ export default function ReparacionesPage() {
 
     return estado
       .toLowerCase()
-      .replace(
-        /\b\w/g,
-        (letra) =>
-          letra.toUpperCase()
+      .replace(/\b\w/g, (letra) =>
+        letra.toUpperCase()
       );
   };
 
   const estadoClase = (
     estado: string | null
   ) => {
-    switch (
-      normalizar(
-        estado || ""
-      )
-    ) {
+    switch (normalizar(estado || "")) {
       case "recibido":
         return "bg-blue-50 text-blue-700 border-blue-200";
 
@@ -389,24 +341,19 @@ export default function ReparacionesPage() {
   };
 
   /* =========================================
-     ABRIR ORDEN
+     NAVEGACIÓN
   ========================================== */
 
-  const abrirOrden = (
-    id: number
-  ) => {
-    router.push(
-      `/reparaciones/${id}`
-    );
+  const abrirOrden = (id: number) => {
+    router.push(`/reparaciones/${id}`);
+  };
+
+  const irInicio = () => {
+    router.push("/");
   };
 
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-gray-900">
-
-      {/* =====================================
-          CONTENIDO
-      ====================================== */}
-
       <div className="mx-auto max-w-[1500px] p-5 md:p-8">
 
         {/* =====================================
@@ -429,7 +376,18 @@ export default function ReparacionesPage() {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+
+            {/* ÚNICO BOTÓN DE NAVEGACIÓN */}
+
+            <button
+              type="button"
+              onClick={irInicio}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-[0.98]"
+            >
+              <Home size={17} />
+              Inicio
+            </button>
 
             <button
               type="button"
@@ -459,12 +417,10 @@ export default function ReparacionesPage() {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 active:scale-[0.98]"
             >
               <Plus size={18} />
-
               Nueva reparación
             </button>
 
           </div>
-
         </div>
 
         {/* =====================================
@@ -477,9 +433,7 @@ export default function ReparacionesPage() {
             titulo="Recibidos"
             valor={recibidos}
             descripcion="Esperando diagnóstico"
-            icon={
-              <Clock3 size={20} />
-            }
+            icon={<Clock3 size={20} />}
             clase="blue"
           />
 
@@ -487,9 +441,7 @@ export default function ReparacionesPage() {
             titulo="En reparación"
             valor={enReparacion}
             descripcion="Trabajos activos"
-            icon={
-              <Wrench size={20} />
-            }
+            icon={<Wrench size={20} />}
             clase="purple"
           />
 
@@ -497,9 +449,7 @@ export default function ReparacionesPage() {
             titulo="Reparados"
             valor={reparados}
             descripcion="Listos para entregar"
-            icon={
-              <CheckCircle2 size={20} />
-            }
+            icon={<CheckCircle2 size={20} />}
             clase="green"
           />
 
@@ -507,9 +457,7 @@ export default function ReparacionesPage() {
             titulo="Pendientes de entrega"
             valor={pendientesEntrega}
             descripcion="Esperando al cliente"
-            icon={
-              <Smartphone size={20} />
-            }
+            icon={<Smartphone size={20} />}
             clase="orange"
           />
 
@@ -540,12 +488,8 @@ export default function ReparacionesPage() {
                 type="button"
                 onClick={() => {
                   setBusqueda("");
-                  setEstadoFiltro(
-                    "TODOS"
-                  );
-                  setModeloFiltro(
-                    "TODOS"
-                  );
+                  setEstadoFiltro("TODOS");
+                  setModeloFiltro("TODOS");
                 }}
                 className="text-xs font-semibold text-gray-500 hover:text-black"
               >
@@ -556,8 +500,6 @@ export default function ReparacionesPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1fr_220px_220px]">
-
-            {/* BUSCADOR */}
 
             <div className="relative">
 
@@ -570,9 +512,7 @@ export default function ReparacionesPage() {
                 type="text"
                 value={busqueda}
                 onChange={(e) =>
-                  setBusqueda(
-                    e.target.value
-                  )
+                  setBusqueda(e.target.value)
                 }
                 placeholder="Buscar cliente, IMEI, modelo, número de orden..."
                 className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm outline-none transition focus:border-black focus:bg-white focus:ring-2 focus:ring-black/5"
@@ -580,14 +520,10 @@ export default function ReparacionesPage() {
 
             </div>
 
-            {/* ESTADO */}
-
             <select
               value={estadoFiltro}
               onChange={(e) =>
-                setEstadoFiltro(
-                  e.target.value
-                )
+                setEstadoFiltro(e.target.value)
               }
               className="h-12 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none transition focus:border-black focus:bg-white"
             >
@@ -595,28 +531,20 @@ export default function ReparacionesPage() {
                 Todos los estados
               </option>
 
-              {ESTADOS.map(
-                (estado) => (
-                  <option
-                    key={estado}
-                    value={estado}
-                  >
-                    {estadoTexto(
-                      estado
-                    )}
-                  </option>
-                )
-              )}
+              {ESTADOS.map((estado) => (
+                <option
+                  key={estado}
+                  value={estado}
+                >
+                  {estadoTexto(estado)}
+                </option>
+              ))}
             </select>
-
-            {/* MODELO */}
 
             <select
               value={modeloFiltro}
               onChange={(e) =>
-                setModeloFiltro(
-                  e.target.value
-                )
+                setModeloFiltro(e.target.value)
               }
               className="h-12 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none transition focus:border-black focus:bg-white"
             >
@@ -624,20 +552,17 @@ export default function ReparacionesPage() {
                 Todos los modelos
               </option>
 
-              {modelos.map(
-                (modelo) => (
-                  <option
-                    key={modelo}
-                    value={modelo}
-                  >
-                    {modelo}
-                  </option>
-                )
-              )}
+              {modelos.map((modelo) => (
+                <option
+                  key={modelo}
+                  value={modelo}
+                >
+                  {modelo}
+                </option>
+              ))}
             </select>
 
           </div>
-
         </div>
 
         {/* =====================================
@@ -679,8 +604,6 @@ export default function ReparacionesPage() {
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
-          {/* HEADER */}
-
           <div className="flex flex-col gap-3 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between">
 
             <div>
@@ -692,8 +615,7 @@ export default function ReparacionesPage() {
                 {cargando
                   ? "Cargando órdenes..."
                   : `${ordenesFiltradas.length} ${
-                      ordenesFiltradas.length ===
-                      1
+                      ordenesFiltradas.length === 1
                         ? "orden encontrada"
                         : "órdenes encontradas"
                     }`}
@@ -738,13 +660,12 @@ export default function ReparacionesPage() {
           {/* SIN RESULTADOS */}
 
           {!cargando &&
-            ordenesFiltradas.length ===
-              0 && (
+            ordenesFiltradas.length === 0 && (
               <div className="flex min-h-[400px] flex-col items-center justify-center px-5 text-center">
 
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100">
-                  {ordenes.length ===
-                  0 ? (
+
+                  {ordenes.length === 0 ? (
                     <Wrench
                       size={28}
                       className="text-gray-400"
@@ -755,24 +676,22 @@ export default function ReparacionesPage() {
                       className="text-gray-400"
                     />
                   )}
+
                 </div>
 
                 <h3 className="mt-5 text-base font-bold text-gray-900">
-                  {ordenes.length ===
-                  0
+                  {ordenes.length === 0
                     ? "No hay reparaciones todavía"
                     : "No encontramos reparaciones"}
                 </h3>
 
                 <p className="mt-2 max-w-md text-sm leading-6 text-gray-400">
-                  {ordenes.length ===
-                  0
+                  {ordenes.length === 0
                     ? "Cuando recibas un iPhone, la orden aparecerá automáticamente en este listado."
                     : "Prueba modificando la búsqueda o limpiando los filtros."}
                 </p>
 
-                {ordenes.length ===
-                  0 && (
+                {ordenes.length === 0 && (
                   <button
                     type="button"
                     onClick={() =>
@@ -787,18 +706,13 @@ export default function ReparacionesPage() {
                   </button>
                 )}
 
-                {ordenes.length >
-                  0 && (
+                {ordenes.length > 0 && (
                   <button
                     type="button"
                     onClick={() => {
                       setBusqueda("");
-                      setEstadoFiltro(
-                        "TODOS"
-                      );
-                      setModeloFiltro(
-                        "TODOS"
-                      );
+                      setEstadoFiltro("TODOS");
+                      setModeloFiltro("TODOS");
                     }}
                     className="mt-6 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                   >
@@ -812,8 +726,7 @@ export default function ReparacionesPage() {
           {/* TABLA */}
 
           {!cargando &&
-            ordenesFiltradas.length >
-              0 && (
+            ordenesFiltradas.length > 0 && (
               <div className="overflow-x-auto">
 
                 <table className="w-full min-w-[950px]">
@@ -857,9 +770,7 @@ export default function ReparacionesPage() {
                         <tr
                           key={orden.id}
                           onClick={() =>
-                            abrirOrden(
-                              orden.id
-                            )
+                            abrirOrden(orden.id)
                           }
                           className="group cursor-pointer transition hover:bg-gray-50"
                         >
@@ -871,9 +782,7 @@ export default function ReparacionesPage() {
                             <div className="flex items-center gap-3">
 
                               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition group-hover:bg-black group-hover:text-white">
-                                <Wrench
-                                  size={18}
-                                />
+                                <Wrench size={18} />
                               </div>
 
                               <div>
@@ -912,14 +821,11 @@ export default function ReparacionesPage() {
                               <div>
 
                                 <p className="text-sm font-semibold text-gray-900">
-                                  {orden.cliente
-                                    ?.nombre ||
+                                  {orden.cliente?.nombre ||
                                     "Sin nombre"}
                                 </p>
 
-                                {orden
-                                  .cliente
-                                  ?.telefono && (
+                                {orden.cliente?.telefono && (
                                   <p className="mt-0.5 text-xs text-gray-400">
                                     {
                                       orden
@@ -949,16 +855,13 @@ export default function ReparacionesPage() {
                               <div>
 
                                 <p className="text-sm font-semibold text-gray-900">
-                                  {orden.equipo
-                                    ?.modelo ||
+                                  {orden.equipo?.modelo ||
                                     "iPhone"}
                                 </p>
 
                                 <div className="mt-0.5 flex items-center gap-2">
 
-                                  {orden
-                                    .equipo
-                                    ?.capacidad && (
+                                  {orden.equipo?.capacidad && (
                                     <span className="text-xs text-gray-400">
                                       {
                                         orden
@@ -968,9 +871,7 @@ export default function ReparacionesPage() {
                                     </span>
                                   )}
 
-                                  {orden
-                                    .equipo
-                                    ?.imei && (
+                                  {orden.equipo?.imei && (
                                     <>
                                       <span className="text-gray-300">
                                         •
@@ -1000,8 +901,7 @@ export default function ReparacionesPage() {
                           <td className="max-w-[250px] px-5 py-4">
 
                             <p className="truncate text-sm text-gray-600">
-                              {orden
-                                .falla_reportada ||
+                              {orden.falla_reportada ||
                                 "Sin problema indicado"}
                             </p>
 
@@ -1040,11 +940,7 @@ export default function ReparacionesPage() {
                           <td className="px-5 py-4 text-right">
 
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-300 transition group-hover:bg-gray-100 group-hover:text-gray-700">
-
-                              <ChevronRight
-                                size={18}
-                              />
-
+                              <ChevronRight size={18} />
                             </div>
 
                           </td>
@@ -1075,7 +971,6 @@ export default function ReparacionesPage() {
         </div>
 
       </div>
-
     </main>
   );
 }

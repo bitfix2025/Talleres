@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   FormEvent,
   useEffect,
@@ -12,6 +14,8 @@ import { supabase } from "@/lib/supabase";
 
 import {
   Plus,
+  ArrowLeft,
+  Home,
   Search,
   Loader2,
   X,
@@ -102,6 +106,8 @@ const moneda = (valor: number) =>
   }).format(numero(valor));
 
 export default function VentasPage() {
+  const router = useRouter();
+
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -1095,17 +1101,43 @@ export default function VentasPage() {
 
         {/* HEADER */}
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#18a66b]">
-              Gestión
-            </p>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 active:scale-[0.98]"
+          >
+            <ArrowLeft size={15} />
+            Volver
+          </button>
 
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-gray-950">
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-600 shadow-sm transition hover:border-[#bcebd5] hover:bg-[#f7fbf9] hover:text-[#148f5c] active:scale-[0.98]"
+          >
+            <Home size={15} />
+            Inicio
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b]">
+                <ShoppingCart size={17} />
+              </span>
+
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#18a66b]">
+                Gestión
+              </p>
+            </div>
+
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-gray-950">
               Ventas
             </h1>
 
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 max-w-2xl text-sm text-gray-500">
               Registra ventas rápidamente y descuenta automáticamente el inventario.
             </p>
           </div>
@@ -1116,7 +1148,7 @@ export default function VentasPage() {
               setError("");
               setMostrarNuevaVenta(true);
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#148f5c] active:scale-[0.98]"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#18a66b] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#18a66b]/15 transition hover:bg-[#148f5c] active:scale-[0.98]"
           >
             <Plus size={17} />
             Nueva venta

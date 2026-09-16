@@ -1,4 +1,3 @@
-
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -21,6 +20,8 @@ import {
   Building2,
   CalendarDays,
   ArrowUpRight,
+  ArrowLeft,
+  Home,
 } from "lucide-react";
 
 const TALLER_ID = 1;
@@ -213,9 +214,7 @@ export default function ComprasPage() {
       setProductos((productosData as Producto[]) || []);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Error al cargar datos"
+        err instanceof Error ? err.message : "Error al cargar datos"
       );
     } finally {
       setCargando(false);
@@ -329,8 +328,7 @@ export default function ComprasPage() {
 
       const total = detalles.reduce(
         (sum, detalle) =>
-          sum +
-          detalle.cantidad * detalle.precio_unitario,
+          sum + detalle.cantidad * detalle.precio_unitario,
         0
       );
 
@@ -385,26 +383,28 @@ export default function ComprasPage() {
             );
           }
 
-          const { data: nuevoProducto, error: errorProducto } =
-            await supabase
-              .from("productos")
-              .insert({
-                taller_id: TALLER_ID,
-                nombre: nombreNuevo,
-                categoria:
-                  detalle.categoria || "OTROS",
-                marca: null,
-                modelo: null,
-                sku: null,
-                descripcion: null,
-                costo: detalle.precio_unitario,
-                precio: detalle.precio_unitario,
-                stock_actual: 0,
-                stock_minimo: 0,
-                activo: true,
-              })
-              .select()
-              .single();
+          const {
+            data: nuevoProducto,
+            error: errorProducto,
+          } = await supabase
+            .from("productos")
+            .insert({
+              taller_id: TALLER_ID,
+              nombre: nombreNuevo,
+              categoria:
+                detalle.categoria || "OTROS",
+              marca: null,
+              modelo: null,
+              sku: null,
+              descripcion: null,
+              costo: detalle.precio_unitario,
+              precio: detalle.precio_unitario,
+              stock_actual: 0,
+              stock_minimo: 0,
+              activo: true,
+            })
+            .select()
+            .single();
 
           if (errorProducto) {
             throw new Error(
@@ -605,6 +605,46 @@ export default function ComprasPage() {
     <main className="min-h-screen bg-[#f4f7f5] text-[#17201b]">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
 
+        {/* ================================================= */}
+        {/* NAVEGACIÓN */}
+        {/* ================================================= */}
+
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 text-sm font-bold text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+            >
+              <ArrowLeft size={16} />
+              <span className="hidden sm:inline">
+                Volver
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = "/";
+              }}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 text-sm font-bold text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+            >
+              <Home size={16} />
+              <span className="hidden sm:inline">
+                Inicio
+              </span>
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-[#dcefe5] bg-[#f7fcf9] px-3.5 py-2 text-xs font-bold text-[#148f5c]">
+            Gestión de compras
+          </div>
+        </div>
+
+        {/* ================================================= */}
+        {/* HEADER */}
+        {/* ================================================= */}
+
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#18a66b]">
@@ -680,6 +720,10 @@ export default function ComprasPage() {
           </div>
         )}
 
+        {/* ================================================= */}
+        {/* TABS */}
+        {/* ================================================= */}
+
         <div className="mt-7 flex gap-1 border-b border-gray-200">
           <button
             type="button"
@@ -715,6 +759,10 @@ export default function ComprasPage() {
             )}
           </button>
         </div>
+
+        {/* ================================================= */}
+        {/* ÓRDENES */}
+        {/* ================================================= */}
 
         {tab === "ordenes" && (
           <>
@@ -969,6 +1017,10 @@ export default function ComprasPage() {
           </>
         )}
 
+        {/* ================================================= */}
+        {/* PROVEEDORES */}
+        {/* ================================================= */}
+
         {tab === "proveedores" && (
           <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 p-5">
@@ -1098,14 +1150,12 @@ export default function ComprasPage() {
       </div>
 
       {/* ===================================================== */}
-      {/* MODAL NUEVA ORDEN — SOLO DISEÑO MODIFICADO */}
+      {/* MODAL NUEVA ORDEN */}
       {/* ===================================================== */}
 
       {mostrarNuevaOrden && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5">
           <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-gray-200 bg-[#f8faf9] shadow-2xl">
-
-            {/* HEADER */}
 
             <div className="shrink-0 border-b border-gray-200 bg-white px-5 py-5 sm:px-7">
               <div className="flex items-start justify-between gap-4">
@@ -1147,16 +1197,12 @@ export default function ComprasPage() {
               </div>
             </div>
 
-            {/* CONTENIDO */}
-
             <div className="min-h-0 flex-1 overflow-y-auto">
               <form
                 onSubmit={crearOrden}
                 className="p-5 sm:p-7"
               >
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-
-                  {/* COLUMNA PRINCIPAL */}
 
                   <div className="space-y-6">
 
@@ -1633,7 +1679,7 @@ export default function ComprasPage() {
                     </section>
                   </div>
 
-                  {/* RESUMEN LATERAL */}
+                  {/* RESUMEN */}
 
                   <aside className="lg:sticky lg:top-0 lg:self-start">
                     <div className="overflow-hidden rounded-2xl border border-[#bcebd5] bg-white shadow-sm">
