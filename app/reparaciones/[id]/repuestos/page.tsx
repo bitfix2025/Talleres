@@ -13,7 +13,7 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { supabase } from "../../../../../lib/supabase";
+import { supabase } from "../../../../lib/supabase";
 
 const TALLER_ID = 1;
 
