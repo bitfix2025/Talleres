@@ -53,14 +53,15 @@ export default function RepuestosReparacionPage(){
       if(existente){
         const r=await supabase.from("presupuesto_reparacion_items").update({cantidad:nueva,precio_unitario:precio}).eq("id",existente.id).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
         if(r.error)throw new Error(r.error.message);
+        setItems(prev=>prev.map(x=>x.id===existente.id?{...x,cantidad:nueva,precio_unitario:precio}:x));
       }else{
-        const r=await supabase.from("presupuesto_reparacion_items").insert({taller_id:TALLER_ID,orden_id:ordenId,producto_id:p.id,cantidad:q,costo_unitario:Number(p.costo||0),precio_unitario:precio}).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
+        // presupuesto_reparacion_items no tiene taller_id. El taller se determina por la orden/producto.
+        const r=await supabase.from("presupuesto_reparacion_items").insert({orden_id:ordenId,producto_id:p.id,cantidad:q,costo_unitario:Number(p.costo||0),precio_unitario:precio}).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
         if(r.error)throw new Error(r.error.message);
         setItems(prev=>[...prev,{...(r.data as Omit<Item,"producto">),producto:p}]);
       }
       setMensaje(`${p.nombre} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
-      if(existente)await cargar();
-    }catch(e){setError(`No se pudo agregar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
+    }catch(e){setError(`No se pudo guardar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
     finally{setGuardando(false);}
   };
 
