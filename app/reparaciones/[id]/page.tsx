@@ -1,1436 +1,977 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  ClipboardCheck,
+  FileText,
+  Home,
+  ImageIcon,
+  Loader2,
+  Package,
+  Save,
+  Smartphone,
+  User,
+  Wrench,
+} from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
-type Opcion = {
-  texto: string;
-  estado: string;
+type Cliente = {
+  nombre: string | null;
+  telefono: string | null;
 };
 
-type ItemChecklist = {
-  id: string;
-  categoria: string;
-  prueba: string;
-  opciones: Opcion[];
+type Equipo = {
+  marca: string | null;
+  modelo: string | null;
+  imei: string | null;
+  numero_serie: string | null;
+  color: string | null;
+  capacidad: string | null;
+  bateria_porcentaje: number | null;
 };
 
-type FotoRecepcion = {
+type Orden = {
+  id: number;
+  taller_id: number | null;
+  cliente_id: number | null;
+  equipo_id: number | null;
+  estado: string | null;
+  falla_reportada: string | null;
+  observaciones: string | null;
+  created_at: string | null;
+  cliente: Cliente | null;
+  equipo: Equipo | null;
+};
+
+type Foto = {
   id: number;
   tipo: string;
   url: string;
 };
 
-const ITEMS: ItemChecklist[] = [
-  {
-    id: "pantalla",
-    categoria: "Estado físico",
-    prueba: "Pantalla",
-    opciones: [
-      { texto: "Sin daños", estado: "FUNCIONA" },
-      { texto: "Rayada", estado: "NO_FUNCIONA" },
-      { texto: "Rota", estado: "NO_FUNCIONA" },
-      { texto: "Manchas", estado: "NO_FUNCIONA" },
-      { texto: "No enciende", estado: "NO_FUNCIONA" },
-    ],
-  },
-  {
-    id: "vidrio_trasero",
-    categoria: "Estado físico",
-    prueba: "Vidrio trasero",
-    opciones: [
-      { texto: "Sin daños", estado: "FUNCIONA" },
-      { texto: "Rayado", estado: "NO_FUNCIONA" },
-      { texto: "Roto", estado: "NO_FUNCIONA" },
-    ],
-  },
-  {
-    id: "marco_chasis",
-    categoria: "Estado físico",
-    prueba: "Marco / chasis",
-    opciones: [
-      { texto: "Sin daños", estado: "FUNCIONA" },
-      { texto: "Golpes", estado: "NO_FUNCIONA" },
-      { texto: "Rayones", estado: "NO_FUNCIONA" },
-      { texto: "Doblado", estado: "NO_FUNCIONA" },
-    ],
-  },
-  {
-    id: "camaras",
-    categoria: "Estado físico",
-    prueba: "Cámaras",
-    opciones: [
-      { texto: "Sin daños visibles", estado: "FUNCIONA" },
-      { texto: "Vidrio roto", estado: "NO_FUNCIONA" },
-      { texto: "Lente rayado", estado: "NO_FUNCIONA" },
-    ],
-  },
-  {
-    id: "encendido",
-    categoria: "Pruebas funcionales",
-    prueba: "Encendido",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "No funciona", estado: "NO_FUNCIONA" },
-    ],
-  },
-  {
-    id: "face_id",
-    categoria: "Pruebas funcionales",
-    prueba: "Face ID",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "No funciona", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "touch",
-    categoria: "Pruebas funcionales",
-    prueba: "Touch / táctil",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "carga",
-    categoria: "Pruebas funcionales",
-    prueba: "Carga",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "camara_trasera",
-    categoria: "Pruebas funcionales",
-    prueba: "Cámara trasera",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "camara_frontal",
-    categoria: "Pruebas funcionales",
-    prueba: "Cámara frontal",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "microfono",
-    categoria: "Pruebas funcionales",
-    prueba: "Micrófono",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "altavoz",
-    categoria: "Pruebas funcionales",
-    prueba: "Altavoz",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "auricular",
-    categoria: "Pruebas funcionales",
-    prueba: "Auricular",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "vibracion",
-    categoria: "Pruebas funcionales",
-    prueba: "Vibración",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "wifi",
-    categoria: "Conectividad",
-    prueba: "Wi-Fi",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "bluetooth",
-    categoria: "Conectividad",
-    prueba: "Bluetooth",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "red_movil",
-    categoria: "Conectividad",
-    prueba: "Red móvil",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
-  {
-    id: "gps",
-    categoria: "Conectividad",
-    prueba: "GPS",
-    opciones: [
-      { texto: "Funciona", estado: "FUNCIONA" },
-      { texto: "Falla", estado: "NO_FUNCIONA" },
-      { texto: "No probado", estado: "NO_PROBADO" },
-    ],
-  },
+const ESTADOS = [
+  "RECIBIDO",
+  "DIAGNOSTICO",
+  "PRESUPUESTO",
+  "ESPERANDO REPUESTO",
+  "EN REPARACION",
+  "REPARADO",
+  "ENTREGADO",
+  "CANCELADO",
 ];
 
-const CATEGORIAS = [
-  "Estado físico",
-  "Pruebas funcionales",
-  "Conectividad",
+const FLUJO = [
+  "RECIBIDO",
+  "DIAGNOSTICO",
+  "PRESUPUESTO",
+  "ESPERANDO REPUESTO",
+  "EN REPARACION",
+  "REPARADO",
+  "ENTREGADO",
 ];
 
-const ACCESORIOS = [
-  "Cargador",
-  "Cable",
-  "Funda",
-  "Caja",
-];
+const normalizar = (valor: string | null | undefined) =>
+  (valor || "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 
-const TIPOS_FOTO = [
-  { id: "frente", nombre: "Frente", icono: "📱" },
-  { id: "trasera", nombre: "Trasera", icono: "🔄" },
-  {
-    id: "lateral_izquierdo",
-    nombre: "Lateral izquierdo",
-    icono: "↔️",
-  },
-  {
-    id: "lateral_derecho",
-    nombre: "Lateral derecho",
-    icono: "↔️",
-  },
-  { id: "danos", nombre: "Daños", icono: "⚠️" },
-];
+const estadoTexto = (estado: string | null | undefined) => {
+  if (!estado) return "Sin estado";
 
-export default function ChecklistPage() {
+  return estado
+    .toLowerCase()
+    .replace(/\b\w/g, (letra) => letra.toUpperCase());
+};
+
+const estadoClase = (estado: string | null | undefined) => {
+  switch (normalizar(estado)) {
+    case "RECIBIDO":
+      return "border-blue-200 bg-blue-50 text-blue-700";
+    case "DIAGNOSTICO":
+      return "border-purple-200 bg-purple-50 text-purple-700";
+    case "PRESUPUESTO":
+      return "border-yellow-200 bg-yellow-50 text-yellow-700";
+    case "ESPERANDO REPUESTO":
+      return "border-orange-200 bg-orange-50 text-orange-700";
+    case "EN REPARACION":
+      return "border-indigo-200 bg-indigo-50 text-indigo-700";
+    case "REPARADO":
+      return "border-green-200 bg-green-50 text-green-700";
+    case "ENTREGADO":
+      return "border-gray-200 bg-gray-100 text-gray-600";
+    case "CANCELADO":
+      return "border-red-200 bg-red-50 text-red-700";
+    default:
+      return "border-gray-200 bg-gray-100 text-gray-600";
+  }
+};
+
+const formatearFecha = (fecha: string | null) => {
+  if (!fecha) return "-";
+
+  try {
+    return new Date(fecha).toLocaleString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "-";
+  }
+};
+
+export default function ReparacionDetallePage() {
   const params = useParams();
   const router = useRouter();
 
-  const ordenId = String(params.id);
-  const ordenIdNumero = Number(ordenId);
+  const ordenId = Number(params.id);
 
-  const [respuestas, setRespuestas] = useState<Record<string, string>>({});
-  const [accesorios, setAccesorios] = useState<string[]>([]);
-  const [observaciones, setObservaciones] = useState("");
-  const [fotosGuardadas, setFotosGuardadas] = useState<FotoRecepcion[]>([]);
-  const [guardando, setGuardando] = useState(false);
+  const [orden, setOrden] = useState<Orden | null>(null);
+  const [fotos, setFotos] = useState<Foto[]>([]);
+  const [diagnostico, setDiagnostico] = useState("");
+  const [notasTecnicas, setNotasTecnicas] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [mensaje, setMensaje] = useState("");
-  const [bloqueado, setBloqueado] = useState(false);
+  const [error, setError] = useState("");
 
-  const cambiarRespuesta = (
-    itemId: string,
-    valor: string
-  ) => {
-    if (bloqueado || guardando) return;
-
-    setRespuestas((actual) => ({
-      ...actual,
-      [itemId]: valor,
-    }));
-  };
-
-  const cambiarAccesorio = (
-    accesorio: string
-  ) => {
-    if (bloqueado || guardando) return;
-
-    setAccesorios((actual) => {
-      if (actual.includes(accesorio)) {
-        return actual.filter(
-          (item) => item !== accesorio
-        );
-      }
-
-      return [...actual, accesorio];
-    });
-  };
-
-  const cargarFotos = async () => {
-    try {
-      const {
-        data,
-        error,
-      } = await supabase
-        .from("fotos_recepcion")
-        .select("id, tipo, url")
-        .eq(
-          "orden_id",
-          ordenIdNumero
-        )
-        .order("id", {
-          ascending: true,
-        });
-
-      if (error) {
-        console.error(
-          "ERROR CARGANDO FOTOS:",
-          error
-        );
-        setFotosGuardadas([]);
-        return;
-      }
-
-      setFotosGuardadas(
-        (data || []) as FotoRecepcion[]
-      );
-    } catch (error) {
-      console.error(
-        "ERROR EN cargarFotos:",
-        error
-      );
-      setFotosGuardadas([]);
+  const cargarOrden = async () => {
+    if (!Number.isFinite(ordenId) || ordenId <= 0) {
+      setError("ID de reparación inválido.");
+      setCargando(false);
+      return;
     }
-  };
 
-  const cargarChecklist = async () => {
     try {
       setCargando(true);
-      setMensaje("");
+      setError("");
 
-      if (
-        !ordenIdNumero ||
-        Number.isNaN(ordenIdNumero)
-      ) {
-        setMensaje("ID de orden inválido.");
-        return;
-      }
-
-      const {
-        data: orden,
-        error: errorOrden,
-      } = await supabase
+      const { data, error: errorOrden } = await supabase
         .from("ordenes_reparacion")
-        .select(
-          "checklist_completado, checklist_fecha"
-        )
-        .eq(
-          "id",
-          ordenIdNumero
-        )
+        .select(`
+          id,
+          taller_id,
+          cliente_id,
+          equipo_id,
+          estado,
+          falla_reportada,
+          observaciones,
+          created_at,
+          clientes (
+            nombre,
+            telefono
+          ),
+          equipos (
+            marca,
+            modelo,
+            imei,
+            numero_serie,
+            color,
+            capacidad,
+            bateria_porcentaje
+          )
+        `)
+        .eq("id", ordenId)
         .maybeSingle();
 
-      if (errorOrden) {
-        console.error(
-          "ERROR CARGANDO ESTADO DE LA ORDEN:",
-          errorOrden
-        );
+      if (errorOrden) throw errorOrden;
 
-        setMensaje(
-          `Error cargando orden: ${
-            errorOrden.message ||
-            "Error desconocido"
-          }`
-        );
-
+      if (!data) {
+        setOrden(null);
+        setError("La orden no existe.");
         return;
       }
 
-      const estaCerrado =
-        orden?.checklist_completado === true;
+      const cliente = Array.isArray(data.clientes)
+        ? data.clientes[0] || null
+        : data.clientes || null;
 
-      setBloqueado(estaCerrado);
+      const equipo = Array.isArray(data.equipos)
+        ? data.equipos[0] || null
+        : data.equipos || null;
 
-      // 🔧 CARGAR FOTOS SIEMPRE
+      const ordenFormateada: Orden = {
+        id: data.id,
+        taller_id: data.taller_id,
+        cliente_id: data.cliente_id,
+        equipo_id: data.equipo_id,
+        estado: data.estado,
+        falla_reportada: data.falla_reportada,
+        observaciones: data.observaciones,
+        created_at: data.created_at,
+        cliente,
+        equipo,
+      };
+
+      setOrden(ordenFormateada);
+
+      const observaciones = data.observaciones || "";
+      const diagnosticoGuardado = observaciones.match(
+        /Diagnóstico:\s*([\s\S]*?)(?:\n\nNotas técnicas:|$)/i
+      );
+      const notasGuardadas = observaciones.match(
+        /Notas técnicas:\s*([\s\S]*)$/i
+      );
+
+      setDiagnostico(
+        diagnosticoGuardado?.[1]?.trim() || ""
+      );
+      setNotasTecnicas(
+        notasGuardadas?.[1]?.trim() ||
+          (diagnosticoGuardado ? "" : observaciones)
+      );
+
       await cargarFotos();
-
-      const {
-        data,
-        error,
-      } = await supabase
-        .from("checklist_reparacion")
-        .select(
-          `
-            id,
-            orden_id,
-            momento,
-            categoria,
-            prueba,
-            estado,
-            observacion,
-            created_at,
-            updated_at,
-            checklist_item_id,
-            usuario_id,
-            orden_prueba
-          `
-        )
-        .eq(
-          "orden_id",
-          ordenIdNumero
-        )
-        .eq(
-          "momento",
-          "ENTRADA"
-        )
-        .order(
-          "orden_prueba",
-          {
-            ascending: true,
-          }
-        );
-
-      if (error) {
-        console.error(
-          "ERROR CARGANDO CHECKLIST:",
-          error
-        );
-
-        setMensaje(
-          `Error cargando checklist: ${
-            error.message ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
-      }
-
-      setRespuestas({});
-      setAccesorios([]);
-      setObservaciones("");
-
-      if (
-        !data ||
-        data.length === 0
-      ) {
-        return;
-      }
-
-      const nuevasRespuestas: Record<
-        string,
-        string
-      > = {};
-
-      let nuevaObservacion = "";
-
-      const accesoriosEncontrados: string[] = [];
-
-      data.forEach((fila: any) => {
-        if (
-          fila.categoria === "Accesorios"
-        ) {
-          if (
-            ACCESORIOS.includes(
-              fila.prueba
-            ) &&
-            !accesoriosEncontrados.includes(
-              fila.prueba
-            )
-          ) {
-            accesoriosEncontrados.push(
-              fila.prueba
-            );
-          }
-
-          if (
-            fila.observacion &&
-            !nuevaObservacion
-          ) {
-            nuevaObservacion =
-              fila.observacion;
-          }
-
-          return;
-        }
-
-        const item = ITEMS.find(
-          (item) =>
-            item.prueba ===
-            fila.prueba
-        );
-
-        if (item) {
-          const opcion =
-            item.opciones.find(
-              (opcion) =>
-                opcion.estado ===
-                fila.estado
-            );
-
-          if (opcion) {
-            nuevasRespuestas[item.id] =
-              opcion.texto;
-          }
-        }
-
-        if (
-          fila.observacion &&
-          !nuevaObservacion
-        ) {
-          nuevaObservacion =
-            fila.observacion;
-        }
-      });
-
-      setRespuestas(
-        nuevasRespuestas
+    } catch (err: any) {
+      console.error("ERROR CARGANDO REPARACIÓN:", err);
+      setError(
+        err?.message || "No se pudo cargar la reparación."
       );
-
-      setAccesorios(
-        accesoriosEncontrados
-      );
-
-      setObservaciones(
-        nuevaObservacion
-      );
-    } catch (error: any) {
-      console.error(
-        "ERROR CARGANDO CHECKLIST:",
-        error
-      );
-
-      setMensaje(
-        `Error cargando checklist: ${
-          error?.message ||
-          "Error desconocido"
-        }`
-      );
+      setOrden(null);
     } finally {
       setCargando(false);
     }
   };
 
+  const cargarFotos = async () => {
+    if (!Number.isFinite(ordenId) || ordenId <= 0) return;
+
+    try {
+      const { data, error: errorFotos } = await supabase
+        .from("fotos_recepcion")
+        .select("id, tipo, url")
+        .eq("orden_id", ordenId)
+        .order("id", { ascending: true });
+
+      if (errorFotos) {
+        console.error("ERROR CARGANDO FOTOS:", errorFotos);
+        setFotos([]);
+        return;
+      }
+
+      setFotos((data || []) as Foto[]);
+    } catch (err) {
+      console.error("ERROR CARGANDO FOTOS:", err);
+      setFotos([]);
+    }
+  };
+
   useEffect(() => {
-    cargarChecklist();
+    cargarOrden();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordenId]);
 
-  const guardarChecklist = async () => {
-    if (bloqueado) {
-      setMensaje(
-        "Este checklist ya está cerrado y no se puede modificar."
-      );
+  const posicionActual = useMemo(() => {
+    const posicion = FLUJO.indexOf(
+      normalizar(orden?.estado)
+    );
 
+    return posicion;
+  }, [orden?.estado]);
+
+  const siguienteEstado = useMemo(() => {
+    if (posicionActual < 0) return null;
+    if (posicionActual >= FLUJO.length - 1) return null;
+    return FLUJO[posicionActual + 1];
+  }, [posicionActual]);
+
+  const cambiarEstado = async (nuevoEstado: string) => {
+    if (!orden || cambiandoEstado) return;
+
+    if (!ESTADOS.includes(nuevoEstado)) {
+      setError("Estado no válido.");
       return;
     }
 
-    if (guardando) return;
+    try {
+      setCambiandoEstado(true);
+      setMensaje("");
+      setError("");
+
+      const { error: errorUpdate } = await supabase
+        .from("ordenes_reparacion")
+        .update({ estado: nuevoEstado })
+        .eq("id", orden.id);
+
+      if (errorUpdate) throw errorUpdate;
+
+      setOrden((actual) =>
+        actual
+          ? { ...actual, estado: nuevoEstado }
+          : actual
+      );
+
+      setMensaje(
+        `La orden pasó a ${estadoTexto(nuevoEstado)}.`
+      );
+    } catch (err: any) {
+      console.error("ERROR CAMBIANDO ESTADO:", err);
+      setError(
+        err?.message || "No se pudo cambiar el estado."
+      );
+    } finally {
+      setCambiandoEstado(false);
+    }
+  };
+
+  const avanzarReparacion = async () => {
+    if (!siguienteEstado) return;
+    await cambiarEstado(siguienteEstado);
+  };
+
+  const guardarNotas = async () => {
+    if (!orden || guardando) return;
 
     try {
       setGuardando(true);
       setMensaje("");
+      setError("");
 
-      if (
-        !ordenIdNumero ||
-        Number.isNaN(ordenIdNumero)
-      ) {
-        setMensaje(
-          "ID de orden inválido."
-        );
-        return;
+      const diagnosticoLimpio = diagnostico.trim();
+      const notasLimpias = notasTecnicas.trim();
+
+      let observaciones = "";
+
+      if (diagnosticoLimpio) {
+        observaciones += `Diagnóstico:\n${diagnosticoLimpio}`;
       }
 
-      const seleccionados =
-        ITEMS.filter(
-          (item) =>
-            respuestas[item.id]
-        );
-
-      if (
-        seleccionados.length === 0 &&
-        accesorios.length === 0 &&
-        !observaciones.trim()
-      ) {
-        setMensaje(
-          "Seleccioná al menos una prueba, accesorio u observación antes de guardar."
-        );
-
-        return;
+      if (notasLimpias) {
+        if (observaciones) observaciones += "\n\n";
+        observaciones += `Notas técnicas:\n${notasLimpias}`;
       }
 
-      const {
-        data: ordenSeguridad,
-        error: errorOrdenSeguridad,
-      } = await supabase
+      const { error: errorUpdate } = await supabase
         .from("ordenes_reparacion")
-        .select(
-          "checklist_completado"
-        )
-        .eq(
-          "id",
-          ordenIdNumero
-        )
-        .maybeSingle();
+        .update({ observaciones })
+        .eq("id", orden.id);
 
-      if (errorOrdenSeguridad) {
-        console.error(
-          "ERROR VERIFICANDO ORDEN:",
-          errorOrdenSeguridad
-        );
+      if (errorUpdate) throw errorUpdate;
 
-        setMensaje(
-          `No se pudo verificar la orden: ${
-            errorOrdenSeguridad.message ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
-      }
-
-      if (
-        ordenSeguridad?.checklist_completado ===
-        true
-      ) {
-        setBloqueado(true);
-
-        setMensaje(
-          "Este checklist ya fue cerrado y no puede modificarse."
-        );
-
-        return;
-      }
-
-      const {
-        error: errorDelete,
-      } = await supabase
-        .from(
-          "checklist_reparacion"
-        )
-        .delete()
-        .eq(
-          "orden_id",
-          ordenIdNumero
-        )
-        .eq(
-          "momento",
-          "ENTRADA"
-        );
-
-      if (errorDelete) {
-        console.error(
-          "ERROR ELIMINANDO CHECKLIST ANTERIOR:",
-          JSON.stringify(
-            errorDelete,
-            null,
-            2
-          )
-        );
-
-        setMensaje(
-          `No se pudo preparar el checklist: ${
-            errorDelete.message ||
-            errorDelete.details ||
-            errorDelete.hint ||
-            errorDelete.code ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
-      }
-
-      const filas =
-        seleccionados.map(
-          (item, index) => {
-            const opcion =
-              item.opciones.find(
-                (opcion) =>
-                  opcion.texto ===
-                  respuestas[item.id]
-              );
-
-            return {
-              orden_id:
-                ordenIdNumero,
-
-              momento:
-                "ENTRADA",
-
-              categoria:
-                item.categoria,
-
-              prueba:
-                item.prueba,
-
-              estado:
-                opcion?.estado ||
-                "NO_PROBADO",
-
-              observacion:
-                observaciones.trim() ||
-                null,
-
-              orden_prueba:
-                index + 1,
-            };
-          }
-        );
-
-      const filasAccesorios =
-        accesorios.map(
-          (accesorio, index) => ({
-            orden_id:
-              ordenIdNumero,
-
-            momento:
-              "ENTRADA",
-
-            categoria:
-              "Accesorios",
-
-            prueba:
-              accesorio,
-
-            estado:
-              "FUNCIONA",
-
-            observacion:
-              observaciones.trim() ||
-              null,
-
-            orden_prueba:
-              filas.length +
-              index +
-              1,
-          })
-        );
-
-      const filasFinales = [
-        ...filas,
-        ...filasAccesorios,
-      ];
-
-      console.log(
-        "FILAS CHECKLIST A INSERTAR:",
-        JSON.stringify(
-          filasFinales,
-          null,
-          2
-        )
+      setOrden((actual) =>
+        actual
+          ? { ...actual, observaciones }
+          : actual
       );
 
-      const {
-        data: datosInsertados,
-        error: errorInsert,
-      } = await supabase
-        .from(
-          "checklist_reparacion"
-        )
-        .insert(
-          filasFinales
-        )
-        .select();
-
-      if (errorInsert) {
-        console.error(
-          "ERROR INSERTANDO CHECKLIST:",
-          JSON.stringify(
-            errorInsert,
-            null,
-            2
-          )
-        );
-
-        console.error(
-          "FILAS QUE SE INTENTARON INSERTAR:",
-          JSON.stringify(
-            filasFinales,
-            null,
-            2
-          )
-        );
-
-        setMensaje(
-          `Error guardando checklist: ${
-            errorInsert.message ||
-            errorInsert.details ||
-            errorInsert.hint ||
-            errorInsert.code ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
-      }
-
-      console.log(
-        "CHECKLIST INSERTADO CORRECTAMENTE:",
-        datosInsertados
+      setMensaje("Diagnóstico y notas guardados correctamente.");
+    } catch (err: any) {
+      console.error("ERROR GUARDANDO NOTAS:", err);
+      setError(
+        err?.message || "No se pudieron guardar las notas."
       );
-
-      const fechaCierre =
-        new Date().toISOString();
-
-      const {
-        data: ordenActualizada,
-        error: errorCerrar,
-      } = await supabase
-        .from(
-          "ordenes_reparacion"
-        )
-        .update({
-          checklist_completado:
-            true,
-
-          checklist_fecha:
-            fechaCierre,
-        })
-        .eq(
-          "id",
-          ordenIdNumero
-        )
-        .eq(
-          "checklist_completado",
-          false
-        )
-        .select(
-          "checklist_completado, checklist_fecha"
-        )
-        .maybeSingle();
-
-      if (errorCerrar) {
-        console.error(
-          "ERROR CERRANDO CHECKLIST:",
-          JSON.stringify(
-            errorCerrar,
-            null,
-            2
-          )
-        );
-
-        setMensaje(
-          `El checklist se guardó, pero no se pudo cerrar: ${
-            errorCerrar.message ||
-            errorCerrar.details ||
-            errorCerrar.hint ||
-            errorCerrar.code ||
-            "Error desconocido"
-          }`
-        );
-
-        return;
-      }
-
-      if (
-        !ordenActualizada
-      ) {
-        const {
-          data: ordenVerificada,
-          error: errorVerificacion,
-        } = await supabase
-          .from(
-            "ordenes_reparacion"
-          )
-          .select(
-            "checklist_completado, checklist_fecha"
-          )
-          .eq(
-            "id",
-            ordenIdNumero
-          )
-          .maybeSingle();
-
-        if (errorVerificacion) {
-          console.error(
-            "ERROR VERIFICANDO CIERRE:",
-            JSON.stringify(
-              errorVerificacion,
-              null,
-              2
-            )
-          );
-
-          setMensaje(
-            `El checklist se guardó, pero no se pudo confirmar el cierre: ${
-              errorVerificacion.message ||
-              errorVerificacion.details ||
-              errorVerificacion.hint ||
-              errorVerificacion.code ||
-              "Error desconocido"
-            }`
-          );
-
-          return;
-        }
-
-        if (
-          ordenVerificada?.checklist_completado !==
-          true
-        ) {
-          setMensaje(
-            "El checklist se guardó, pero la orden no pudo cerrarse."
-          );
-
-          return;
-        }
-      }
-
-      setBloqueado(true);
-
-      setMensaje(
-        "Checklist guardado y cerrado correctamente."
-      );
-
-      await cargarChecklist();
-
-    } catch (error: any) {
-      console.error(
-        "ERROR GUARDANDO CHECKLIST:",
-        error
-      );
-
-      setMensaje(
-        `Error guardando: ${
-          error?.message ||
-          "Error desconocido"
-        }`
-      );
-
     } finally {
       setGuardando(false);
     }
   };
 
-  const fotosActualesPorTipo = (
-    tipo: string
-  ) => {
-    return fotosGuardadas.filter(
-      (foto) =>
-        foto.tipo === tipo
+  if (cargando) {
+    return (
+      <main className="min-h-screen bg-[#f5f6f8] text-gray-900">
+        <div className="flex min-h-screen items-center justify-center p-6">
+          <div className="text-center">
+            <Loader2
+              size={32}
+              className="mx-auto animate-spin text-gray-700"
+            />
+            <p className="mt-4 text-sm font-semibold text-gray-600">
+              Cargando reparación...
+            </p>
+          </div>
+        </div>
+      </main>
     );
-  };
+  }
+
+  if (!orden) {
+    return (
+      <main className="min-h-screen bg-[#f5f6f8] text-gray-900">
+        <div className="mx-auto max-w-[1200px] p-5 md:p-8">
+          <button
+            type="button"
+            onClick={() => router.push("/reparaciones")}
+            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-gray-500 transition hover:text-black"
+          >
+            <ArrowLeft size={17} />
+            Volver a reparaciones
+          </button>
+
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-8">
+            <h1 className="text-xl font-bold text-red-800">
+              No se pudo cargar la reparación
+            </h1>
+            <p className="mt-2 text-sm text-red-700">
+              {error || "La orden no existe."}
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f5f6f8] text-gray-900">
+      <div className="mx-auto max-w-[1500px] p-5 md:p-8">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => router.push("/reparaciones")}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+            >
+              <ArrowLeft size={17} />
+              Volver
+            </button>
 
-      <div className="mx-auto max-w-[1200px] p-5 md:p-8">
-
-        <button
-          type="button"
-          onClick={() =>
-            router.push(
-              `/reparaciones`
-            )
-          }
-          className="mb-6 text-sm font-semibold text-gray-500 transition hover:text-black"
-        >
-          ← Volver a reparaciones
-        </button>
-
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-
-          <div className="border-b border-gray-100 p-6 md:p-8">
-
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
-              <div>
-
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400">
-                  Orden #{ordenId}
-                </p>
-
-                <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-950">
-                  Checklist de recepción
-                </h1>
-
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
-                  Comprueba el estado físico y funcional del equipo antes de comenzar la reparación.
-                </p>
-
-              </div>
-
-              {bloqueado ? (
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-xs font-bold text-green-700">
-                  🔒 CHECKLIST CERRADO
-                </span>
-              ) : (
-                <span className="inline-flex w-fit rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700">
-                  RECIBIDO
-                </span>
-              )}
-
-            </div>
-
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+            >
+              <Home size={17} />
+              Inicio
+            </button>
           </div>
 
-          <div className="p-6 md:p-8">
-
-            {bloqueado && (
-              <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-
-                <p className="text-sm font-bold text-amber-800">
-                  Checklist de recepción cerrado
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-amber-700">
-                  Este registro representa el estado del equipo al momento de recibirlo. El técnico puede consultarlo, pero no modificarlo.
-                </p>
-
-              </div>
-            )}
-
-            {cargando ? (
-              <div className="flex min-h-[300px] items-center justify-center">
-
-                <p className="text-sm font-semibold text-gray-500">
-                  Cargando checklist...
-                </p>
-
-              </div>
-            ) : (
-              <>
-
-                {CATEGORIAS.map(
-                  (categoria) => {
-
-                    const items =
-                      ITEMS.filter(
-                        (item) =>
-                          item.categoria ===
-                          categoria
-                      );
-
-                    return (
-                      <section
-                        key={categoria}
-                        className="mb-8 border-b border-gray-100 pb-8"
-                      >
-
-                        <div className="mb-5">
-
-                          <h2 className="text-xl font-bold text-gray-950">
-                            {categoria}
-                          </h2>
-
-                          <p className="mt-1 text-xs text-gray-400">
-                            {bloqueado
-                              ? "Estado registrado al recibir el equipo."
-                              : "Registra el estado del equipo."}
-                          </p>
-
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-2">
-
-                          {items.map(
-                            (item) => (
-
-                              <div
-                                key={item.id}
-                                className={`rounded-xl border p-4 transition ${
-                                  bloqueado
-                                    ? "border-gray-200 bg-gray-50"
-                                    : "border-gray-200 hover:border-gray-300"
-                                }`}
-                              >
-
-                                <label className="block text-sm font-bold text-gray-900">
-                                  {item.prueba}
-                                </label>
-
-                                <select
-                                  value={
-                                    respuestas[
-                                      item.id
-                                    ] || ""
-                                  }
-                                  disabled={
-                                    bloqueado ||
-                                    guardando
-                                  }
-                                  onChange={(
-                                    e
-                                  ) =>
-                                    cambiarRespuesta(
-                                      item.id,
-                                      e.target.value
-                                    )
-                                  }
-                                  className={`mt-3 h-11 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none transition ${
-                                    bloqueado
-                                      ? "cursor-not-allowed bg-gray-100 text-gray-600"
-                                      : "bg-gray-50 focus:border-black focus:bg-white"
-                                  }`}
-                                >
-
-                                  <option value="">
-                                    {bloqueado
-                                      ? "Sin registro"
-                                      : "Seleccionar"}
-                                  </option>
-
-                                  {item.opciones.map(
-                                    (
-                                      opcion
-                                    ) => (
-
-                                      <option
-                                        key={
-                                          opcion.texto
-                                        }
-                                        value={
-                                          opcion.texto
-                                        }
-                                      >
-                                        {
-                                          opcion.texto
-                                        }
-                                      </option>
-
-                                    )
-                                  )}
-
-                                </select>
-
-                              </div>
-
-                            )
-                          )}
-
-                        </div>
-
-                      </section>
-                    );
-                  }
-                )}
-
-                <section className="mb-8 border-b border-gray-100 pb-8">
-
-                  <div className="mb-5">
-
-                    <h2 className="text-xl font-bold text-gray-950">
-                      Accesorios recibidos
-                    </h2>
-
-                    <p className="mt-1 text-xs text-gray-400">
-                      {bloqueado
-                        ? "Accesorios registrados al recibir el equipo."
-                        : "Marca los accesorios que quedaron en el taller."}
-                    </p>
-
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-
-                    {ACCESORIOS.map(
-                      (accesorio) => {
-
-                        const seleccionado =
-                          accesorios.includes(
-                            accesorio
-                          );
-
-                        return (
-
-                          <label
-                            key={
-                              accesorio
-                            }
-                            className={`flex items-center gap-3 rounded-xl border p-4 transition ${
-                              bloqueado
-                                ? "cursor-not-allowed border-gray-200 bg-gray-50"
-                                : seleccionado
-                                ? "cursor-pointer border-black bg-gray-50"
-                                : "cursor-pointer border-gray-200 hover:bg-gray-50"
-                            }`}
-                          >
-
-                            <input
-                              type="checkbox"
-                              checked={
-                                seleccionado
-                              }
-                              disabled={
-                                bloqueado ||
-                                guardando
-                              }
-                              onChange={() =>
-                                cambiarAccesorio(
-                                  accesorio
-                                )
-                              }
-                              className="h-4 w-4"
-                            />
-
-                            <span className="text-sm font-semibold text-gray-800">
-                              {accesorio}
-                            </span>
-
-                          </label>
-
-                        );
-                      }
-                    )}
-
-                  </div>
-
-                  {accesorios.length > 0 && (
-                    <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-
-                      <p className="text-xs font-semibold text-green-700">
-                        Accesorios registrados:{" "}
-                        {accesorios.join(", ")}
-                      </p>
-
-                    </div>
-                  )}
-
-                </section>
-
-                <section className="mb-8 border-b border-gray-100 pb-8">
-
-                  <div className="mb-5">
-
-                    <h2 className="text-xl font-bold text-gray-950">
-                      Observaciones
-                    </h2>
-
-                    <p className="mt-1 text-xs text-gray-400">
-                      {bloqueado
-                        ? "Observaciones registradas al recibir el equipo."
-                        : "Registra cualquier detalle adicional del equipo."}
-                    </p>
-
-                  </div>
-
-                  <textarea
-                    value={
-                      observaciones
-                    }
-                    disabled={
-                      bloqueado ||
-                      guardando
-                    }
-                    onChange={(e) =>
-                      setObservaciones(
-                        e.target.value
-                      )
-                    }
-                    rows={6}
-                    placeholder="Ej.: Equipo recibido con golpes en el marco..."
-                    className={`w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition ${
-                      bloqueado
-                        ? "cursor-not-allowed bg-gray-100 text-gray-600"
-                        : "bg-gray-50 focus:border-black focus:bg-white"
-                    }`}
-                  />
-
-                </section>
-
-                <div className="mt-8 grid gap-4 sm:grid-cols-4">
-
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-
-                    <p className="text-xs font-semibold text-gray-400">
-                      Pruebas registradas
-                    </p>
-
-                    <p className="mt-1 text-2xl font-bold text-gray-950">
-                      {
-                        Object.keys(
-                          respuestas
-                        ).length
-                      }
-                    </p>
-
-                  </div>
-
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-
-                    <p className="text-xs font-semibold text-gray-400">
-                      Accesorios
-                    </p>
-
-                    <p className="mt-1 text-2xl font-bold text-gray-950">
-                      {
-                        accesorios.length
-                      }
-                    </p>
-
-                  </div>
-
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-
-                    <p className="text-xs font-semibold text-gray-400">
-                      Fotografías
-                    </p>
-
-                    <p className="mt-1 text-2xl font-bold text-gray-950">
-                      {fotosGuardadas.length}
-                    </p>
-
-                  </div>
-
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-
-                    <p className="text-xs font-semibold text-gray-400">
-                      Estado
-                    </p>
-
-                    <p className="mt-1 text-sm font-bold text-gray-950">
-                      {bloqueado
-                        ? "CERRADO"
-                        : "PENDIENTE"}
-                    </p>
-
-                  </div>
-
+          <div className="text-xs font-semibold text-gray-400">
+            Orden #{orden.id}
+          </div>
+        </div>
+
+        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="border-b border-gray-100 p-6 md:p-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">
+                    ORDEN #{orden.id}
+                  </span>
+
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs font-bold ${estadoClase(
+                      orden.estado
+                    )}`}
+                  >
+                    {estadoTexto(orden.estado)}
+                  </span>
                 </div>
 
-                {mensaje && (
-                  <div
-                    className={`mt-6 rounded-xl border px-4 py-3 text-sm font-semibold ${
-                      mensaje.includes(
-                        "correctamente"
-                      )
-                        ? "border-green-200 bg-green-50 text-green-700"
-                        : "border-red-200 bg-red-50 text-red-700"
-                    }`}
-                  >
-                    {mensaje}
+                <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-950 md:text-4xl">
+                  Gestión de reparación
+                </h1>
+
+                <p className="mt-2 text-sm text-gray-500">
+                  Administra el diagnóstico, avance y finalización del equipo.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/reparaciones/${orden.id}/checklist`)
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+                >
+                  <ClipboardCheck size={18} />
+                  Checklist
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/reparaciones/${orden.id}/fotos`)
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+                >
+                  <ImageIcon size={18} />
+                  Fotos
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/reparaciones/${orden.id}/repuestos`)
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+                >
+                  <Package size={18} />
+                  Repuestos
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-b border-gray-100 bg-gray-50/70 px-6 py-6 md:px-8">
+            <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+                  Flujo de reparación
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Actualiza el estado a medida que avanza el trabajo.
+                </p>
+              </div>
+
+              {siguienteEstado && (
+                <button
+                  type="button"
+                  disabled={cambiandoEstado}
+                  onClick={avanzarReparacion}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-xs font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {cambiandoEstado ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <ArrowRight size={16} />
+                  )}
+                  Avanzar a {estadoTexto(siguienteEstado)}
+                </button>
+              )}
+            </div>
+
+            <div className="overflow-x-auto pb-2">
+              <div className="flex min-w-[900px] items-center">
+                {FLUJO.map((estado, index) => {
+                  const activo = index === posicionActual;
+                  const completado =
+                    posicionActual >= 0 && posicionActual > index;
+
+                  return (
+                    <div
+                      key={estado}
+                      className="flex flex-1 items-center"
+                    >
+                      <button
+                        type="button"
+                        disabled={cambiandoEstado}
+                        onClick={() => cambiarEstado(estado)}
+                        className="group flex min-w-0 flex-col items-center text-center"
+                      >
+                        <div
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-bold transition ${
+                            activo
+                              ? "border-black bg-black text-white"
+                              : completado
+                              ? "border-green-500 bg-green-500 text-white"
+                              : "border-gray-300 bg-white text-gray-400 group-hover:border-gray-500"
+                          }`}
+                        >
+                          {completado ? (
+                            <Check size={17} />
+                          ) : (
+                            index + 1
+                          )}
+                        </div>
+
+                        <span
+                          className={`mt-2 max-w-[110px] text-[10px] font-bold uppercase leading-4 ${
+                            activo
+                              ? "text-gray-950"
+                              : completado
+                              ? "text-green-700"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          {estadoTexto(estado)}
+                        </span>
+                      </button>
+
+                      {index < FLUJO.length - 1 && (
+                        <div
+                          className={`mx-2 h-[2px] flex-1 ${
+                            completado ? "bg-green-400" : "bg-gray-200"
+                          }`}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {mensaje && (
+          <div className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+            {mensaje}
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+          <div className="space-y-6">
+            <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-100 px-6 py-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100">
+                    <Smartphone size={20} className="text-gray-700" />
                   </div>
-                )}
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-950">
+                      Cliente y equipo
+                    </h2>
+                    <p className="text-xs text-gray-400">
+                      Información de la orden
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-                {/* FOTOGRAFÍAS DE RECEPCIÓN - AL FINAL */}
-                {fotosGuardadas.length > 0 && (
-                  <section className="mt-10 border-t border-gray-100 pt-10">
-                    <div className="mb-5">
-                      <h2 className="text-xl font-bold text-gray-950">
-                        Fotografías de recepción
-                      </h2>
-                      <p className="mt-1 text-xs text-gray-400">
-                        Fotos registradas al momento de recibir el equipo
-                      </p>
+              <div className="grid gap-6 p-6 md:grid-cols-2">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="flex items-center gap-2">
+                    <User size={17} className="text-gray-500" />
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                      Cliente
+                    </p>
+                  </div>
+
+                  <p className="mt-3 text-lg font-bold text-gray-950">
+                    {orden.cliente?.nombre || "Sin nombre"}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {orden.cliente?.telefono || "Sin teléfono"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                  <div className="flex items-center gap-2">
+                    <Smartphone size={17} className="text-gray-500" />
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                      Equipo
+                    </p>
+                  </div>
+
+                  <p className="mt-3 text-lg font-bold text-gray-950">
+                    {[orden.equipo?.marca, orden.equipo?.modelo]
+                      .filter(Boolean)
+                      .join(" ") || "Sin equipo"}
+                  </p>
+
+                  <div className="mt-3 grid gap-2 text-xs text-gray-500">
+                    <p>
+                      <span className="font-semibold text-gray-700">IMEI:</span>{" "}
+                      {orden.equipo?.imei || "-"}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-gray-700">Serie:</span>{" "}
+                      {orden.equipo?.numero_serie || "-"}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-gray-700">Color:</span>{" "}
+                      {orden.equipo?.color || "-"}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-gray-700">Capacidad:</span>{" "}
+                      {orden.equipo?.capacidad || "-"}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-gray-700">Batería:</span>{" "}
+                      {orden.equipo?.bateria_porcentaje != null
+                        ? `${orden.equipo.bateria_porcentaje}%`
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
+                  <Wrench size={20} className="text-red-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-950">
+                    Falla reportada
+                  </h2>
+                  <p className="text-xs text-gray-400">
+                    Problema informado por el cliente
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-5">
+                <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                  {orden.falla_reportada ||
+                    "No se registró una falla reportada."}
+                </p>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-100 px-6 py-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50">
+                    <FileText size={20} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-950">
+                      Diagnóstico y notas técnicas
+                    </h2>
+                    <p className="text-xs text-gray-400">
+                      Información interna del técnico
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <label className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                  Diagnóstico
+                </label>
+                <textarea
+                  value={diagnostico}
+                  onChange={(e) => setDiagnostico(e.target.value)}
+                  rows={5}
+                  placeholder="Ej.: Se verifica falla de carga. Se realizan mediciones y pruebas sobre el módulo..."
+                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 outline-none transition focus:border-black focus:bg-white"
+                />
+
+                <label className="mt-5 block text-xs font-bold uppercase tracking-wide text-gray-400">
+                  Notas técnicas
+                </label>
+                <textarea
+                  value={notasTecnicas}
+                  onChange={(e) => setNotasTecnicas(e.target.value)}
+                  rows={6}
+                  placeholder="Mediciones, observaciones internas, piezas que se deben revisar, etc."
+                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 outline-none transition focus:border-black focus:bg-white"
+                />
+
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    disabled={guardando}
+                    onClick={guardarNotas}
+                    className="inline-flex items-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {guardando ? (
+                      <Loader2 size={17} className="animate-spin" />
+                    ) : (
+                      <Save size={17} />
+                    )}
+                    Guardar notas
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-6">
+            <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+                Resumen
+              </p>
+
+              <div className="mt-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <span className="text-sm text-gray-500">Estado</span>
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs font-bold ${estadoClase(
+                      orden.estado
+                    )}`}
+                  >
+                    {estadoTexto(orden.estado)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <span className="text-sm text-gray-500">Ingreso</span>
+                  <span className="text-right text-xs font-semibold text-gray-700">
+                    {formatearFecha(orden.created_at)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <span className="text-sm text-gray-500">Fotos</span>
+                  <span className="text-sm font-bold text-gray-950">
+                    {fotos.length}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Orden</span>
+                  <span className="text-sm font-bold text-gray-950">
+                    #{orden.id}
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+                Acciones
+              </p>
+
+              <div className="mt-5 space-y-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/reparaciones/${orden.id}/checklist`)
+                  }
+                  className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <ClipboardCheck size={17} />
+                    Ver checklist
+                  </span>
+                  <ArrowRight size={16} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/reparaciones/${orden.id}/fotos`)
+                  }
+                  className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <ImageIcon size={17} />
+                    Ver fotografías
+                  </span>
+                  <ArrowRight size={16} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/reparaciones/${orden.id}/repuestos`)
+                  }
+                  className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <Package size={17} />
+                    Gestionar repuestos
+                  </span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            </section>
+
+            {fotos.length > 0 && (
+              <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-950">
+                      Fotografías
+                    </h2>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Fotos de recepción
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">
+                    {fotos.length}
+                  </span>
+                </div>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  {fotos.slice(0, 6).map((foto) => (
+                    <div
+                      key={foto.id}
+                      className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50"
+                    >
+                      <img
+                        src={foto.url}
+                        alt={`Foto ${foto.tipo}`}
+                        className="aspect-square w-full object-cover"
+                      />
                     </div>
+                  ))}
+                </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {TIPOS_FOTO.map((tipo) => {
-                        const fotosDelTipo = fotosActualesPorTipo(
-                          tipo.id
-                        );
-
-                        if (fotosDelTipo.length === 0) {
-                          return null;
-                        }
-
-                        return (
-                          <div
-                            key={tipo.id}
-                            className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50"
-                          >
-                            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">
-                                  {tipo.icono}
-                                </span>
-                                <span className="text-sm font-bold text-gray-900">
-                                  {tipo.nombre}
-                                </span>
-                              </div>
-                              <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700">
-                                GUARDADA
-                              </span>
-                            </div>
-
-                            <div className="space-y-2 p-3">
-                              {fotosDelTipo.map(
-                                (foto) => (
-                                  <div
-                                    key={foto.id}
-                                    className="overflow-hidden rounded-xl border border-gray-200 bg-white"
-                                  >
-                                    <img
-                                      src={foto.url}
-                                      alt={`Foto ${tipo.nombre}`}
-                                      className="aspect-[4/3] w-full object-cover"
-                                    />
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
-                <div className="mt-8 flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:justify-end">
-
+                {fotos.length > 6 && (
                   <button
                     type="button"
                     onClick={() =>
-                      router.push(
-                        `/reparaciones/${ordenId}/fotos`
-                      )
+                      router.push(`/reparaciones/${orden.id}/fotos`)
                     }
-                    className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                    className="mt-4 w-full rounded-xl border border-gray-200 px-4 py-3 text-xs font-bold text-gray-600 transition hover:bg-gray-50"
                   >
-                    📷 Ver/agregar fotos
+                    Ver todas las fotografías
                   </button>
-
-                  {!bloqueado && (
-                    <button
-                      type="button"
-                      onClick={
-                        guardarChecklist
-                      }
-                      disabled={
-                        guardando
-                      }
-                      className="rounded-xl bg-black px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {guardando
-                        ? "Guardando..."
-                        : "Guardar y cerrar checklist"}
-                    </button>
-                  )}
-
-                </div>
-
-              </>
+                )}
+              </section>
             )}
 
-          </div>
+            <section className="rounded-2xl border border-gray-200 bg-gray-950 p-6 text-white shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+                Próximo paso
+              </p>
 
+              {siguienteEstado ? (
+                <>
+                  <h2 className="mt-3 text-xl font-bold">
+                    {estadoTexto(siguienteEstado)}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-gray-400">
+                    Cuando completes la tarea actual, avanza la orden al siguiente estado.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={cambiandoEstado}
+                    onClick={avanzarReparacion}
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-gray-950 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {cambiandoEstado ? (
+                      <Loader2 size={17} className="animate-spin" />
+                    ) : (
+                      <ArrowRight size={17} />
+                    )}
+                    Avanzar reparación
+                  </button>
+                </>
+              ) : normalizar(orden.estado) === "ENTREGADO" ? (
+                <>
+                  <h2 className="mt-3 text-xl font-bold">
+                    Reparación finalizada
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-gray-400">
+                    Esta orden fue marcada como entregada.
+                  </p>
+                  <CheckCircle2 className="mt-5 text-green-400" size={28} />
+                </>
+              ) : normalizar(orden.estado) === "CANCELADO" ? (
+                <>
+                  <h2 className="mt-3 text-xl font-bold">Orden cancelada</h2>
+                  <p className="mt-2 text-sm leading-6 text-gray-400">
+                    La orden está cancelada y no forma parte del flujo activo.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="mt-3 text-xl font-bold">Estado actual</h2>
+                  <p className="mt-2 text-sm leading-6 text-gray-400">
+                    Selecciona un estado en el flujo superior para continuar.
+                  </p>
+                </>
+              )}
+            </section>
+          </div>
         </div>
 
         <div className="py-8 text-center">
-
-          <p className="text-[11px] text-gray-400">
-            BITFIX TALLER · Checklist de recepción
+          <p className="text-[11px] font-semibold tracking-wide text-gray-400">
+            BITFIX TALLER · Gestión de reparación
           </p>
-
         </div>
-
       </div>
-
     </main>
   );
 }
