@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Boxes, CheckCircle2, Home, Loader2, Plus, Trash2 } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
@@ -17,6 +17,7 @@ export default function RepuestosReparacionPage(){
   const [productos,setProductos]=useState<Producto[]>([]),[items,setItems]=useState<Item[]>([]);
   const [productoId,setProductoId]=useState(""),[cantidad,setCantidad]=useState("1"),[precioVenta,setPrecioVenta]=useState(""),[busqueda,setBusqueda]=useState("");
   const [cargando,setCargando]=useState(true),[guardando,setGuardando]=useState(false),[error,setError]=useState(""),[mensaje,setMensaje]=useState("");
+  const scrollPendiente=useRef<number|null>(null);
 
   const cargar=async()=>{
     setCargando(true); setError("");
@@ -40,6 +41,8 @@ export default function RepuestosReparacionPage(){
   useEffect(()=>{if(seleccionado)setPrecioVenta(String(seleccionado.precio??0));},[seleccionado]);
 
   const agregarRepuesto=async()=>{
+    scrollPendiente.current=window.scrollY;
+    (document.activeElement as HTMLElement|null)?.blur();
     setError("");setMensaje("");
     const p=productos.find(x=>x.id===Number(productoId)); console.log("PRODUCTO SELECCIONADO:", p); const q=Number(cantidad); const precio=Number(precioVenta);
     if(!p){setError("Seleccioná un repuesto del inventario.");return;}
@@ -70,6 +73,9 @@ export default function RepuestosReparacionPage(){
         setItems(prev=>[...prev,{...(r.data as Omit<Item,"producto">),producto:p}]);
       }
       setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
+      setTimeout(()=>{
+        if(scrollPendiente.current!==null){ window.scrollTo(0,scrollPendiente.current); }
+      },100);
     }catch(e){setError(`No se pudo guardar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
     finally{setGuardando(false);}
   };
