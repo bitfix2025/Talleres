@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Boxes, CheckCircle2, Home, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Boxes, CheckCircle2, Home, Loader2, Plus, Trash2 } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
 
 const TALLER_ID = 1;
@@ -78,8 +78,7 @@ export default function RepuestosReparacionPage(){
 
   const eliminarRepuesto=async(id:number)=>{setGuardando(true);setError("");const r=await supabase.from("presupuesto_reparacion_items").delete().eq("id",id);if(r.error)setError(`No se pudo eliminar el repuesto: ${r.error.message}`);else{setItems(prev=>prev.filter(x=>x.id!==id));setMensaje("Repuesto eliminado del presupuesto.");}setGuardando(false);};
   const guardarManoObra=async()=>{const valor=Math.max(0,Number(manoObra)||0);setGuardando(true);setError("");const r=await supabase.from("ordenes_reparacion").update({presupuesto_mano_obra:valor}).eq("id",ordenId);if(r.error)setError(`No se pudo guardar la mano de obra: ${r.error.message}`);else setMensaje("Mano de obra guardada.");setGuardando(false);};
-  const guardarPresupuesto=async(enviar:boolean)=>{const mano=Math.max(0,Number(manoObra)||0);if(items.length===0&&mano<=0){setError("Agregá al menos un repuesto o una mano de obra.");return;}setGuardando(true);setError("");const estado=enviar?"ESPERANDO APROBACIÓN":"PRESUPUESTADO";const r=await supabase.from("ordenes_reparacion").update({presupuesto_mano_obra:mano,estado}).eq("id",ordenId);if(r.error)setError(`No se pudo guardar el presupuesto: ${r.error.message}`);else{setMensaje(enviar?"Presupuesto enviado a aprobación.":"Presupuesto guardado correctamente.");if(enviar)setTimeout(()=>router.push(`/reparaciones/${ordenId}`),600);}setGuardando(false);};
-    return <main className="min-h-screen bg-[#f5f6f8] text-gray-900"><div className="mx-auto max-w-6xl p-5 md:p-8">
+  return <main className="min-h-screen bg-[#f5f6f8] text-gray-900"><div className="mx-auto max-w-6xl p-5 md:p-8">
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400">Reparación #{ordenId}</p><h1 className="mt-1 text-3xl font-bold text-gray-950">Presupuesto y repuestos</h1><p className="mt-1 text-sm text-gray-500">Cargá los repuestos del inventario, cantidad, precio y mano de obra.</p></div><div className="flex gap-2"><button onClick={()=>router.push("/")} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold shadow-sm"><Home size={17}/> Inicio</button><button onClick={()=>router.push(`/reparaciones/${ordenId}`)} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold shadow-sm"><ArrowLeft size={17}/> Volver</button></div></div>
     {error&&<div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{error}</div>}{mensaje&&<div className="mb-5 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"><CheckCircle2 size={18}/>{mensaje}</div>}
     <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"><div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-gray-100 p-3"><Boxes size={21}/></div><div><h2 className="text-lg font-bold">Agregar repuesto</h2><p className="text-xs text-gray-500">Seleccioná un producto del inventario y agregalo al presupuesto.</p></div></div>
