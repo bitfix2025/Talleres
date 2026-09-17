@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, ArrowRight, Check, ClipboardCheck, FileText, Home,
   ImageIcon, Loader2, Package, Plus, Save, Smartphone, Trash2, User, Wrench,
-} from "lucide-react";
+, ChevronUp, ChevronDown} from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
 type Cliente = { nombre: string | null; telefono: string | null };
