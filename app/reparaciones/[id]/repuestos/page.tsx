@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Boxes, CheckCircle2, Home, Loader2, Plus, Trash2 } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
@@ -17,7 +17,6 @@ export default function RepuestosReparacionPage(){
   const [productos,setProductos]=useState<Producto[]>([]),[items,setItems]=useState<Item[]>([]);
   const [productoId,setProductoId]=useState(""),[cantidad,setCantidad]=useState("1"),[precioVenta,setPrecioVenta]=useState(""),[busqueda,setBusqueda]=useState("");
   const [cargando,setCargando]=useState(true),[guardando,setGuardando]=useState(false),[error,setError]=useState(""),[mensaje,setMensaje]=useState("");
-  const repuestosRef=useRef<HTMLDivElement>(null);
 
   const cargar=async()=>{
     setCargando(true); setError("");
@@ -71,8 +70,6 @@ export default function RepuestosReparacionPage(){
         setItems(prev=>[...prev,{...(r.data as Omit<Item,"producto">),producto:p}]);
       }
       setMensaje(`${nombreProducto} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
-      // No recargar ni navegar: el repuesto ya quedó agregado en el estado local.
-      requestAnimationFrame(()=>repuestosRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
     }catch(e){setError(`No se pudo guardar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
     finally{setGuardando(false);}
   };
@@ -84,7 +81,7 @@ export default function RepuestosReparacionPage(){
     <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"><div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-gray-100 p-3"><Boxes size={21}/></div><div><h2 className="text-lg font-bold">Agregar repuesto</h2><p className="text-xs text-gray-500">Seleccioná un producto del inventario y agregalo al presupuesto.</p></div></div>
       <div className="grid gap-4 lg:grid-cols-[1fr_120px_160px_auto]"><div><input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar repuesto..." className="mb-2 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none focus:border-black focus:bg-white"/><select value={productoId} onChange={e=>setProductoId(e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-black"><option value="">Seleccionar repuesto del inventario</option>{disponibles.map(p=><option key={p.id} value={p.id}>{p.nombre} — stock {p.stock_actual} — {dinero(Number(p.precio||0))}</option>)}</select></div><div><label className="mb-1 block text-xs font-bold text-gray-400">Cantidad</label><input type="number" min="1" value={cantidad} onChange={e=>setCantidad(e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm"/></div><div><label className="mb-1 block text-xs font-bold text-gray-400">Precio venta</label><input type="number" min="0" step="0.01" value={precioVenta} onChange={e=>setPrecioVenta(e.target.value)} className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm"/></div><button type="button" onClick={agregarRepuesto} disabled={guardando||cargando} className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{guardando?<Loader2 size={17} className="animate-spin"/>:<Plus size={17}/>} Agregar</button></div>
     </section>
-    <section ref={repuestosRef} className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm"><div className="border-b border-gray-100 p-6"><h2 className="text-lg font-bold">Repuestos del presupuesto</h2><p className="text-xs text-gray-500">Estos son los repuestos que se incluirán en la reparación.</p></div><div className="p-6">{cargando?<div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 size={17} className="animate-spin"/> Cargando...</div>:items.length===0?<p className="text-sm text-gray-500">Todavía no agregaste repuestos.</p>:<div className="space-y-3">{items.map(i=><div key={i.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 md:flex-row md:items-center md:justify-between"><div><p className="font-bold">{i.nombre_producto||i.producto?.nombre||`Producto #${i.producto_id}`}</p><p className="text-xs text-gray-500">Cantidad: {i.cantidad} · Precio: {dinero(Number(i.precio_unitario||0))}</p></div><div className="flex items-center gap-4"><p className="font-bold">{dinero(Number(i.cantidad||0)*Number(i.precio_unitario||0))}</p><button onClick={()=>eliminarRepuesto(i.id)} disabled={guardando} className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50"><Trash2 size={17}/></button></div></div>)}</div>}</div></section>
+    <section className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm"><div className="border-b border-gray-100 p-6"><h2 className="text-lg font-bold">Repuestos del presupuesto</h2><p className="text-xs text-gray-500">Estos son los repuestos que se incluirán en la reparación.</p></div><div className="p-6">{cargando?<div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 size={17} className="animate-spin"/> Cargando...</div>:items.length===0?<p className="text-sm text-gray-500">Todavía no agregaste repuestos.</p>:<div className="space-y-3">{items.map(i=><div key={i.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 md:flex-row md:items-center md:justify-between"><div><p className="font-bold">{i.nombre_producto||i.producto?.nombre||`Producto #${i.producto_id}`}</p><p className="text-xs text-gray-500">Cantidad: {i.cantidad} · Precio: {dinero(Number(i.precio_unitario||0))}</p></div><div className="flex items-center gap-4"><p className="font-bold">{dinero(Number(i.cantidad||0)*Number(i.precio_unitario||0))}</p><button onClick={()=>eliminarRepuesto(i.id)} disabled={guardando} className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50"><Trash2 size={17}/></button></div></div>)}</div>}</div></section>
     <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div>
