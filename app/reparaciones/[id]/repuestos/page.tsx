@@ -46,21 +46,30 @@ export default function RepuestosReparacionPage(){
     if(!p){setError("Seleccioná un repuesto del inventario.");return;}
     if(!Number.isInteger(q)||q<=0){setError("La cantidad debe ser un número entero mayor a 0.");return;}
     if(!Number.isFinite(precio)||precio<0){setError("Ingresá un precio de venta válido.");return;}
+    const nombreProducto=String(p.nombre ?? "").trim();
+    if(!nombreProducto){setError("El repuesto seleccionado no tiene nombre en el inventario.");return;}
     const existente=items.find(x=>x.producto_id===p.id); const nueva=(existente?.cantidad||0)+q;
-    if(nueva>p.stock_actual){setError(`Stock insuficiente. ${p.nombre}: ${p.stock_actual} disponible(s).`);return;}
+    if(nueva>p.stock_actual){setError(`Stock insuficiente. ${nombreProducto}: ${p.stock_actual} disponible(s).`);return;}
     setGuardando(true);
     try{
       if(existente){
-        const r=await supabase.from("presupuesto_reparacion_items").update({cantidad:nueva,precio_unitario:precio}).eq("id",existente.id).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
+        const r=await supabase.from("presupuesto_reparacion_items").update({cantidad:nueva,precio_unitario:precio,nombre_producto:nombreProducto}).eq("id",existente.id).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
         if(r.error)throw new Error(r.error.message);
         setItems(prev=>prev.map(x=>x.id===existente.id?{...x,cantidad:nueva,precio_unitario:precio}:x));
       }else{
-        // presupuesto_reparacion_items no tiene taller_id. El taller se determina por la orden/producto.
-        const r=await supabase.from("presupuesto_reparacion_items").insert({orden_id:ordenId,producto_id:p.id,nombre_producto:p.nombre,cantidad:q,costo_unitario:Number(p.costo||0),precio_unitario:precio}).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
+        const payload={
+          orden_id:ordenId,
+          producto_id:p.id,
+          nombre_producto:nombreProducto,
+          cantidad:q,
+          costo_unitario:Number(p.costo||0),
+          precio_unitario:precio,
+        };
+        const r=await supabase.from("presupuesto_reparacion_items").insert(payload).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
         if(r.error)throw new Error(r.error.message);
         setItems(prev=>[...prev,{...(r.data as Omit<Item,"producto">),producto:p}]);
       }
-      setMensaje(`${p.nombre} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
+      setMensaje(`${nombreProducto} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
     }catch(e){setError(`No se pudo guardar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
     finally{setGuardando(false);}
   };
