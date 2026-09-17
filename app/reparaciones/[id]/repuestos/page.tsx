@@ -21,11 +21,13 @@ type Producto = {
   id: number;
   nombre: string;
   categoria: string | null;
+  marca: string | null;
   modelo: string | null;
   sku: string | null;
-  stock_actual: number;
   costo: number | null;
   precio: number | null;
+  stock_actual: number;
+  activo: boolean;
 };
 
 type Item = {
@@ -34,8 +36,15 @@ type Item = {
   cantidad: number;
   precio_unitario: number;
   costo_unitario: number;
-  producto?: Producto | null;
+  producto: Producto | null;
 };
+
+const dinero = (n: number) =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(Number(n) || 0);
 
 export default function RepuestosReparacionPage() {
   const params = useParams();
@@ -51,62 +60,66 @@ export default function RepuestosReparacionPage() {
   const [manoObra, setManoObra] = useState("");
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
 
   const cargar = async () => {
     setCargando(true);
     setError("");
 
-    const [productosRes, itemsRes, ordenRes] = await Promise.all([
-      supabase
-        .from("productos")
-        .select("id,nombre,categoria,modelo,sku,stock_actual,costo,precio")
-        .eq("taller_id", TALLER_ID)
-        .eq("activo", true)
-        .order("nombre", { ascending: true }),
-      supabase
-        .from("presupuesto_reparacion_items")
-        .select("id,producto_id,cantidad,precio_unitario,costo_unitario")
-        .eq("orden_id", ordenId)
-        .order("id", { ascending: true }),
-      supabase
-        .from("ordenes_reparacion")
-        .select("presupuesto_mano_obra")
-        .eq("id", ordenId)
-        .maybeSingle(),
-    ]);
+    const productosRes = await supabase
+      .from("productos")
+      .select(
+        "id,nombre,categoria,marca,modelo,sku,costo,precio,stock_actual,activo"
+      )
+      .eq("taller_id", TALLER_ID)
+      .eq("activo", true)
+      .order("nombre", { ascending: true });
 
     if (productosRes.error) {
-      setError(productosRes.error.message);
-      setCargando(false);
-      return;
-    }
-    if (itemsRes.error) {
-      setError(itemsRes.error.message);
-      setCargando(false);
-      return;
-    }
-    if (ordenRes.error) {
-      setError(ordenRes.error.message);
+      setError(`No se pudo cargar el inventario: ${productosRes.error.message}`);
+      setProductos([]);
       setCargando(false);
       return;
     }
 
     const lista = (productosRes.data ?? []) as Producto[];
-    const guardados = (itemsRes.data ?? []) as Item[];
     setProductos(lista);
-    setItems(
-      guardados.map((i) => ({
-        ...i,
-        producto: lista.find((p) => p.id === i.producto_id) ?? null,
-      }))
-    );
-    setManoObra(
-      ordenRes.data?.presupuesto_mano_obra != null
-        ? String(ordenRes.data.presupuesto_mano_obra)
-        : ""
-    );
+
+    const itemsRes = await supabase
+      .from("presupuesto_reparacion_items")
+      .select("id,producto_id,cantidad,precio_unitario,costo_unitario")
+      .eq("orden_id", ordenId)
+      .order("id", { ascending: true });
+
+    if (itemsRes.error) {
+      setError(
+        `No se pudo cargar el presupuesto. Si es la primera vez que usás esta función, ejecutá la migración de presupuesto en Supabase. Detalle: ${itemsRes.error.message}`
+      );
+      setItems([]);
+    } else {
+      setItems(
+        ((itemsRes.data ?? []) as Omit<Item, "producto">[]).map((item) => ({
+          ...item,
+          producto: lista.find((p) => p.id === item.producto_id) ?? null,
+        }))
+      );
+    }
+
+    const ordenRes = await supabase
+      .from("ordenes_reparacion")
+      .select("presupuesto_mano_obra")
+      .eq("id", ordenId)
+      .maybeSingle();
+
+    if (!ordenRes.error) {
+      setManoObra(
+        ordenRes.data?.presupuesto_mano_obra != null
+          ? String(ordenRes.data.presupuesto_mano_obra)
+          : ""
+      );
+    }
+
     setCargando(false);
   };
 
@@ -121,10 +134,12 @@ export default function RepuestosReparacionPage() {
 
   const disponibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
+
     return productos.filter((p) => {
       if (p.stock_actual <= 0) return false;
       if (!texto) return true;
-      return [p.nombre, p.categoria, p.modelo, p.sku]
+
+      return [p.nombre, p.categoria, p.marca, p.modelo, p.sku]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(texto));
     });
@@ -140,67 +155,69 @@ export default function RepuestosReparacionPage() {
     }
   }, [productoSeleccionado]);
 
-  const agregar = async () => {
-    const id = Number(productoId);
+  const agregarRepuesto = async () => {
+    setError("");
+    setMensaje("");
+
+    const producto = productos.find((p) => p.id === Number(productoId));
     const qty = Number(cantidad);
     const precio = Number(precioVenta);
-    const producto = productos.find((p) => p.id === id);
 
-    setMensaje("");
-    setError("");
-
-    if (!id || !producto) {
-      setError("Seleccioná un repuesto.");
+    if (!producto) {
+      setError("Seleccioná un repuesto del inventario.");
       return;
     }
+
     if (!Number.isInteger(qty) || qty <= 0) {
       setError("La cantidad debe ser un número entero mayor a 0.");
       return;
     }
 
-    const existente = items.find((i) => i.producto_id === id);
-    const cantidadFinal = (existente?.cantidad ?? 0) + qty;
-    if (cantidadFinal > producto.stock_actual) {
-      setError(
-        `Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock_actual}.`
-      );
+    if (!Number.isFinite(precio) || precio < 0) {
+      setError("Ingresá un precio de venta válido.");
       return;
     }
-    if (!Number.isFinite(precio) || precio < 0) {
-      setError("Ingresá un precio válido.");
+
+    const existente = items.find((i) => i.producto_id === producto.id);
+    const nuevaCantidad = (existente?.cantidad ?? 0) + qty;
+
+    if (nuevaCantidad > producto.stock_actual) {
+      setError(
+        `Stock insuficiente. ${producto.nombre} tiene ${producto.stock_actual} unidad(es) disponibles.`
+      );
       return;
     }
 
     setGuardando(true);
 
     if (existente) {
-      const { error: updateError } = await supabase
+      const { error: e } = await supabase
         .from("presupuesto_reparacion_items")
         .update({
-          cantidad: cantidadFinal,
+          cantidad: nuevaCantidad,
           precio_unitario: precio,
         })
         .eq("id", existente.id);
 
-      if (updateError) {
-        setError(updateError.message);
+      if (e) {
+        setError(`No se pudo actualizar el repuesto: ${e.message}`);
         setGuardando(false);
         return;
       }
     } else {
-      const { error: insertError } = await supabase
+      const { error: e } = await supabase
         .from("presupuesto_reparacion_items")
         .insert({
-          orden_id: ordenId,
           taller_id: TALLER_ID,
-          producto_id: id,
+          orden_id: ordenId,
+          producto_id: producto.id,
           cantidad: qty,
-          costo_unitario: producto.costo ?? 0,
+          costo_unitario: Number(producto.costo ?? 0),
           precio_unitario: precio,
         });
 
-      if (insertError) {
-        setError(insertError.message);
+      if (e) {
+        setError(`No se pudo agregar el repuesto: ${e.message}`);
         setGuardando(false);
         return;
       }
@@ -215,45 +232,80 @@ export default function RepuestosReparacionPage() {
     await cargar();
   };
 
-  const eliminar = async (id: number) => {
+  const eliminarRepuesto = async (id: number) => {
     setGuardando(true);
     setError("");
-    const { error: deleteError } = await supabase
+
+    const { error: e } = await supabase
       .from("presupuesto_reparacion_items")
       .delete()
       .eq("id", id);
-    if (deleteError) setError(deleteError.message);
+
+    if (e) setError(`No se pudo eliminar el repuesto: ${e.message}`);
     else setMensaje("Repuesto eliminado del presupuesto.");
+
     setGuardando(false);
     await cargar();
   };
 
   const guardarManoObra = async () => {
     const valor = Math.max(0, Number(manoObra) || 0);
+
     setGuardando(true);
     setError("");
-    const { error: updateError } = await supabase
+
+    const { error: e } = await supabase
       .from("ordenes_reparacion")
       .update({ presupuesto_mano_obra: valor })
       .eq("id", ordenId);
-    if (updateError) setError(updateError.message);
+
+    if (e) setError(`No se pudo guardar la mano de obra: ${e.message}`);
     else setMensaje("Mano de obra guardada.");
+
     setGuardando(false);
   };
 
-  const enviarAprobacion = async () => {
-    const mano = Math.max(0, Number(manoObra) || 0);
-    if (items.length === 0 && mano <= 0) {
-      setError(
-        "Agregá al menos un repuesto o una mano de obra antes de enviar el presupuesto."
-      );
+  const guardarPresupuesto = async () => {
+    if (items.length === 0 && Number(manoObra) <= 0) {
+      setError("Agregá al menos un repuesto o una mano de obra.");
       return;
     }
 
     setGuardando(true);
     setError("");
 
-    const { error: manoError } = await supabase
+    const mano = Math.max(0, Number(manoObra) || 0);
+
+    const { error: e } = await supabase
+      .from("ordenes_reparacion")
+      .update({
+        presupuesto_mano_obra: mano,
+        estado: "PRESUPUESTADO",
+      })
+      .eq("id", ordenId);
+
+    if (e) {
+      setError(`No se pudo guardar el presupuesto: ${e.message}`);
+      setGuardando(false);
+      return;
+    }
+
+    setMensaje("Presupuesto guardado correctamente.");
+    setGuardando(false);
+  };
+
+  const enviarAprobacion = async () => {
+    if (items.length === 0 && Number(manoObra) <= 0) {
+      setError("El presupuesto está vacío. Agregá repuestos o mano de obra.");
+      return;
+    }
+
+    setGuardando(true);
+    setError("");
+
+    const mano = Math.max(0, Number(manoObra) || 0);
+
+    const { error: e } = await supabase
       .from("ordenes_reparacion")
       .update({
         presupuesto_mano_obra: mano,
@@ -261,21 +313,26 @@ export default function RepuestosReparacionPage() {
       })
       .eq("id", ordenId);
 
-    if (manoError) {
-      setError(manoError.message);
+    if (e) {
+      setError(`No se pudo enviar el presupuesto: ${e.message}`);
       setGuardando(false);
       return;
     }
 
-    setMensaje("Presupuesto guardado. La orden pasó a Esperando aprobación.");
+    setMensaje("Presupuesto enviado a aprobación.");
     setGuardando(false);
-    setTimeout(() => router.push(`/reparaciones/${ordenId}`), 700);
+
+    setTimeout(() => {
+      router.push(`/reparaciones/${ordenId}`);
+    }, 700);
   };
 
   const totalRepuestos = items.reduce(
-    (t, i) => t + i.cantidad * Number(i.precio_unitario || 0),
+    (total, item) =>
+      total + Number(item.cantidad || 0) * Number(item.precio_unitario || 0),
     0
   );
+
   const total = totalRepuestos + (Number(manoObra) || 0);
 
   return (
@@ -290,9 +347,10 @@ export default function RepuestosReparacionPage() {
               Presupuesto y repuestos
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Seleccioná repuestos del inventario, agregá mano de obra y enviá el presupuesto a aprobación.
+              Cargá los repuestos del inventario, cantidad, precio y mano de obra.
             </p>
           </div>
+
           <div className="flex gap-2">
             <button
               type="button"
@@ -312,70 +370,87 @@ export default function RepuestosReparacionPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
             {error}
           </div>
         )}
+
         {mensaje && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">
-            <CheckCircle2 size={18} /> {mensaje}
+          <div className="mb-5 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">
+            <CheckCircle2 size={18} />
+            {mensaje}
           </div>
         )}
 
-        <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
-            <div className="rounded-xl bg-gray-100 p-3"><Boxes size={20} /></div>
+            <div className="rounded-xl bg-gray-100 p-3">
+              <Boxes size={21} />
+            </div>
             <div>
-              <h2 className="font-bold">Agregar repuesto</h2>
+              <h2 className="text-lg font-bold">Agregar repuesto</h2>
               <p className="text-xs text-gray-500">
-                El stock se consulta, pero no se descuenta al presupuestar.
+                El stock se reserva en el presupuesto y se descontará cuando corresponda en la reparación.
               </p>
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[1fr_110px_150px_auto]">
+          <div className="grid gap-4 lg:grid-cols-[1fr_120px_160px_auto]">
             <div>
               <input
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por nombre, modelo o SKU..."
-                className="mb-2 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none focus:border-black"
+                placeholder="Buscar repuesto por nombre, modelo, marca o SKU..."
+                className="mb-2 h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none focus:border-black focus:bg-white"
               />
               <select
                 value={productoId}
                 onChange={(e) => setProductoId(e.target.value)}
                 className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-black"
               >
-                <option value="">Seleccionar repuesto</option>
+                <option value="">Seleccionar repuesto del inventario</option>
                 {disponibles.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.nombre} · stock {p.stock_actual} · USD {Number(p.precio ?? 0).toFixed(2)}
+                    {p.nombre} — stock {p.stock_actual} — {dinero(Number(p.precio ?? 0))}
                   </option>
                 ))}
               </select>
+              {!cargando && disponibles.length === 0 && (
+                <p className="mt-2 text-xs text-gray-500">
+                  No hay repuestos con stock disponible que coincidan con la búsqueda.
+                </p>
+              )}
             </div>
-            <input
-              type="number"
-              min="1"
-              value={cantidad}
-              onChange={(e) => setCantidad(e.target.value)}
-              className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none focus:border-black"
-              placeholder="Cantidad"
-            />
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={precioVenta}
-              onChange={(e) => setPrecioVenta(e.target.value)}
-              className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none focus:border-black"
-              placeholder="Precio venta"
-            />
+
+            <div>
+              <label className="mb-1 block text-xs font-bold text-gray-400">Cantidad</label>
+              <input
+                type="number"
+                min="1"
+                value={cantidad}
+                onChange={(e) => setCantidad(e.target.value)}
+                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none focus:border-black"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-bold text-gray-400">Precio de venta</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={precioVenta}
+                onChange={(e) => setPrecioVenta(e.target.value)}
+                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none focus:border-black"
+                placeholder="0.00"
+              />
+            </div>
+
             <button
               type="button"
-              onClick={agregar}
+              onClick={agregarRepuesto}
               disabled={guardando || cargando}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+              className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-black px-5 text-sm font-bold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 lg:mt-5"
             >
               {guardando ? <Loader2 size={17} className="animate-spin" /> : <Plus size={17} />}
               Agregar
@@ -383,115 +458,127 @@ export default function RepuestosReparacionPage() {
           </div>
         </section>
 
-        <section className="mt-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="font-bold">Repuestos del presupuesto</h2>
-              <p className="text-xs text-gray-500">
-                Se descuentan del inventario recién cuando la reparación pasa a En reparación.
-              </p>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
+          <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold">Repuestos del presupuesto</h2>
+                <p className="text-xs text-gray-500">Podés agregar varios repuestos a la misma reparación.</p>
+              </div>
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">
+                {items.length} ítem{items.length === 1 ? "" : "s"}
+              </span>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-400">Repuestos</p>
-              <p className="font-bold">USD {totalRepuestos.toFixed(2)}</p>
-            </div>
-          </div>
 
-          {cargando ? (
-            <div className="py-10 text-center text-sm text-gray-500">Cargando...</div>
-          ) : items.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500">
-              Todavía no agregaste repuestos.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                    <th className="px-3 py-3">Repuesto</th>
-                    <th className="px-3 py-3">Cant.</th>
-                    <th className="px-3 py-3">Precio</th>
-                    <th className="px-3 py-3">Total</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((i) => (
-                    <tr key={i.id} className="border-b border-gray-50">
-                      <td className="px-3 py-4 font-semibold">
-                        {i.producto?.nombre ?? `Producto #${i.producto_id}`}
-                      </td>
-                      <td className="px-3 py-4">{i.cantidad}</td>
-                      <td className="px-3 py-4">USD {Number(i.precio_unitario).toFixed(2)}</td>
-                      <td className="px-3 py-4 font-semibold">
-                        USD {(i.cantidad * Number(i.precio_unitario)).toFixed(2)}
-                      </td>
-                      <td className="px-3 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => eliminar(i.id)}
-                          disabled={guardando}
-                          className="rounded-lg p-2 text-red-500 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+            {cargando ? (
+              <div className="flex min-h-40 items-center justify-center text-sm text-gray-500">
+                <Loader2 className="mr-2 animate-spin" size={20} /> Cargando presupuesto...
+              </div>
+            ) : items.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-200 px-5 py-12 text-center">
+                <Boxes className="mx-auto text-gray-300" size={32} />
+                <p className="mt-3 text-sm font-semibold text-gray-600">Todavía no hay repuestos.</p>
+                <p className="mt-1 text-xs text-gray-400">Seleccioná uno arriba para agregarlo al presupuesto.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                      <p className="font-bold text-gray-950">
+                        {item.producto?.nombre ?? `Producto #${item.producto_id}`}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Cantidad: {item.cantidad} · Precio unitario: {dinero(item.precio_unitario)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 md:justify-end">
+                      <p className="font-bold">{dinero(item.cantidad * item.precio_unitario)}</p>
+                      <button
+                        type="button"
+                        disabled={guardando}
+                        onClick={() => eliminarRepuesto(item.id)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        <Trash2 size={15} /> Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-        <section className="mt-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h2 className="font-bold">Mano de obra</h2>
-              <p className="text-xs text-gray-500">Ingresá el valor de la reparación.</p>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={manoObra}
-                onChange={(e) => setManoObra(e.target.value)}
-                placeholder="USD"
-                className="h-11 w-40 rounded-xl border border-gray-200 px-4 text-sm"
-              />
+          <section className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Resumen</p>
+
+            <div className="mt-5 space-y-4">
+              <div className="flex justify-between border-b border-gray-100 pb-4 text-sm">
+                <span className="text-gray-500">Repuestos</span>
+                <span className="font-bold">{dinero(totalRepuestos)}</span>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                  Mano de obra
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={manoObra}
+                    onChange={(e) => setManoObra(e.target.value)}
+                    placeholder="0.00"
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none focus:border-black focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={guardarManoObra}
+                    disabled={guardando}
+                    className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 bg-white px-3 hover:bg-gray-50 disabled:opacity-50"
+                    title="Guardar mano de obra"
+                  >
+                    <Save size={17} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-gray-950 p-5 text-white">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Total</p>
+                <p className="mt-2 text-3xl font-bold">{dinero(total)}</p>
+              </div>
+
               <button
                 type="button"
-                onClick={guardarManoObra}
-                disabled={guardando}
-                className="inline-flex h-11 items-center gap-2 rounded-xl border border-gray-200 px-4 text-sm font-semibold hover:bg-gray-50 disabled:opacity-50"
+                onClick={guardarPresupuesto}
+                disabled={guardando || cargando}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold hover:bg-gray-50 disabled:opacity-50"
               >
-                <Save size={16} /> Guardar
+                {guardando ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
+                Guardar presupuesto
               </button>
-            </div>
-          </div>
-        </section>
 
-        <section className="mt-5 rounded-2xl bg-gray-950 p-6 text-white shadow-sm">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Total del presupuesto</p>
-              <p className="mt-2 text-3xl font-bold">USD {total.toFixed(2)}</p>
-              <p className="mt-1 text-xs text-gray-400">
-                El inventario no se descuenta hasta iniciar la reparación.
+              <button
+                type="button"
+                onClick={enviarAprobacion}
+                disabled={guardando || cargando}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-black px-4 py-3 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                {guardando ? <Loader2 size={17} className="animate-spin" /> : <ArrowRight size={17} />}
+                Enviar a aprobación
+              </button>
+
+              <p className="text-center text-[11px] leading-5 text-gray-400">
+                El repuesto no se descuenta del inventario al presupuestar. El descuento se hará en la etapa de reparación.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={enviarAprobacion}
-              disabled={guardando || cargando}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-gray-950 hover:bg-gray-100 disabled:opacity-50"
-            >
-              {guardando ? <Loader2 size={17} className="animate-spin" /> : <ArrowRight size={17} />}
-              Enviar a aprobación
-            </button>
-          </div>
-        </section>
+          </section>
+        </div>
+
+        <div className="py-8 text-center text-[11px] font-semibold tracking-wide text-gray-400">
+          BITFIX TALLER · Presupuesto de reparación
+        </div>
       </div>
     </main>
   );
