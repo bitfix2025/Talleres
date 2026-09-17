@@ -56,7 +56,7 @@ export default function RepuestosReparacionPage(){
         setItems(prev=>prev.map(x=>x.id===existente.id?{...x,cantidad:nueva,precio_unitario:precio}:x));
       }else{
         // presupuesto_reparacion_items no tiene taller_id. El taller se determina por la orden/producto.
-        const r=await supabase.from("presupuesto_reparacion_items").insert({orden_id:ordenId,producto_id:p.id,cantidad:q,costo_unitario:Number(p.costo||0),precio_unitario:precio}).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
+        const r=await supabase.from("presupuesto_reparacion_items").insert({orden_id:ordenId,producto_id:p.id,nombre_producto:p.nombre,cantidad:q,costo_unitario:Number(p.costo||0),precio_unitario:precio}).select("id,producto_id,cantidad,precio_unitario,costo_unitario").single();
         if(r.error)throw new Error(r.error.message);
         setItems(prev=>[...prev,{...(r.data as Omit<Item,"producto">),producto:p}]);
       }
