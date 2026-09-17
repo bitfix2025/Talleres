@@ -42,7 +42,7 @@ export default function RepuestosReparacionPage(){
 
   const agregarRepuesto=async()=>{
     setError("");setMensaje("");
-    const p=productos.find(x=>x.id===Number(productoId)); const q=Number(cantidad); const precio=Number(precioVenta);
+    const p=productos.find(x=>x.id===Number(productoId)); console.log("PRODUCTO SELECCIONADO:", p); const q=Number(cantidad); const precio=Number(precioVenta);
     if(!p){setError("Seleccioná un repuesto del inventario.");return;}
     if(!Number.isInteger(q)||q<=0){setError("La cantidad debe ser un número entero mayor a 0.");return;}
     if(!Number.isFinite(precio)||precio<0){setError("Ingresá un precio de venta válido.");return;}
