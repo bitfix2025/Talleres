@@ -40,6 +40,7 @@ export default function RepuestosReparacionPage(){
   useEffect(()=>{if(seleccionado)setPrecioVenta(String(seleccionado.precio??0));},[seleccionado]);
 
   const agregarRepuesto=async()=>{
+    const scrollY=window.scrollY;
     setError("");setMensaje("");
     const p=productos.find(x=>x.id===Number(productoId)); console.log("PRODUCTO SELECCIONADO:", p); const q=Number(cantidad); const precio=Number(precioVenta);
     if(!p){setError("Seleccioná un repuesto del inventario.");return;}
@@ -69,7 +70,9 @@ export default function RepuestosReparacionPage(){
         if(r.error)throw new Error(r.error.message);
         setItems(prev=>[...prev,{...(r.data as Omit<Item,"producto">),producto:p}]);
       }
-      setMensaje(`${nombreProducto} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
+      setItems(prev=>[...prev]);
+      setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
+      requestAnimationFrame(()=>window.scrollTo({top:scrollY,left:0,behavior:"instant"}));
     }catch(e){setError(`No se pudo guardar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
     finally{setGuardando(false);}
   };
