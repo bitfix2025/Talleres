@@ -31,6 +31,48 @@ CREATE POLICY "presupuesto_reparacion_items_all"
   USING (true)
   WITH CHECK (true);
 
+
+-- Garantizar nombre_producto desde el inventario.
+ALTER TABLE public.presupuesto_reparacion_items
+  ADD COLUMN IF NOT EXISTS nombre_producto text;
+
+UPDATE public.presupuesto_reparacion_items i
+SET nombre_producto = p.nombre
+FROM public.productos p
+WHERE p.id = i.producto_id
+  AND (i.nombre_producto IS NULL OR btrim(i.nombre_producto) = '');
+
+CREATE OR REPLACE FUNCTION public.set_presupuesto_reparacion_item_nombre()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF NEW.nombre_producto IS NULL OR btrim(NEW.nombre_producto) = '' THEN
+    SELECT p.nombre INTO NEW.nombre_producto
+    FROM public.productos p
+    WHERE p.id = NEW.producto_id;
+  END IF;
+
+  IF NEW.nombre_producto IS NULL OR btrim(NEW.nombre_producto) = '' THEN
+    RAISE EXCEPTION 'El producto seleccionado no tiene nombre en inventario';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS trg_presupuesto_reparacion_item_nombre
+ON public.presupuesto_reparacion_items;
+
+CREATE TRIGGER trg_presupuesto_reparacion_item_nombre
+BEFORE INSERT OR UPDATE OF producto_id, nombre_producto
+ON public.presupuesto_reparacion_items
+FOR EACH ROW
+EXECUTE FUNCTION public.set_presupuesto_reparacion_item_nombre();
+
+ALTER TABLE public.presupuesto_reparacion_items
+  ALTER COLUMN nombre_producto SET NOT NULL;
+
 -- Estados definitivos del flujo.
 ALTER TABLE ordenes_reparacion
 DROP CONSTRAINT IF EXISTS ordenes_reparacion_estado_check;
