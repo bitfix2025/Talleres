@@ -297,6 +297,9 @@ export default function ChecklistPage() {
   const [bloqueado, setBloqueado] =
     useState(false);
 
+  const [esApple, setEsApple] =
+    useState(true);
+
   const inputRefs =
     useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -440,7 +443,7 @@ export default function ChecklistPage() {
       } = await supabase
         .from("ordenes_reparacion")
         .select(
-          "checklist_completado, checklist_fecha"
+          "checklist_completado, checklist_fecha, equipo_id, equipos(marca)"
         )
         .eq("id", ordenIdNumero)
         .maybeSingle();
@@ -453,6 +456,14 @@ export default function ChecklistPage() {
 
       setBloqueado(
         orden?.checklist_completado === true
+      );
+
+      const marcaEquipo = Array.isArray(orden?.equipos)
+        ? orden.equipos[0]?.marca
+        : orden?.equipos?.marca;
+
+      setEsApple(
+        String(marcaEquipo ?? "").trim().toLowerCase() === "apple"
       );
 
       /*
