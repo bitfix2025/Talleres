@@ -51,7 +51,7 @@ export default function ReparacionDetallePage(){
     if(e||!data){setError(e?.message||"La orden no existe.");setOrden(null);setCargando(false);return;}
     const cliente=Array.isArray(data.clientes)?data.clientes[0]||null:data.clientes||null; const equipo=Array.isArray(data.equipos)?data.equipos[0]||null:data.equipos||null;
     setOrden({...data,cliente,equipo} as Orden);
-    const obs=data.observaciones||""; const dm=obs.match(/Diagnóstico:\s*([\s\S]*?)(?:
+     const obs=data.observaciones||""; const dm=obs.match(/Diagnóstico:\s*([\s\S]*?)(?:\n\nNotas técnicas:|$)/i); const nm=obs.match(/Notas técnicas:\s*([\s\S]*)$/i); setDiagnostico(dm?.[1]?.trim()||""); setNotas(nm?.[1]?.trim()||(dm?"":obs)); setManoObra(data.presupuesto_mano_obra!=null?String(data.presupuesto_mano_obra):""); setContrasenaEquipo(data.contrasena_equipo||"");
 
 Notas técnicas:|$)/i);const nm=obs.match(/Notas técnicas:\s*([\s\S]*)$/i);setDiagnostico(dm?.[1]?.trim()||"");setNotas(nm?.[1]?.trim()||(dm?"":obs));setManoObra(data.presupuesto_mano_obra!=null?String(data.presupuesto_mano_obra):""); setContrasenaEquipo(data.contrasena_equipo||"");
     const {data:td}=await supabase.from("perfiles").select("id,nombre,email,rol,activo").eq("activo",true).in("rol",["TECNICO","tecnico"]); setTecnicos((td||[]) as Tecnico[]);
