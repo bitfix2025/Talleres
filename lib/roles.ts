@@ -1,4 +1,4 @@
-export type RolUsuario = "ADMIN" | "ENCARGADO" | "TECNICO" | "administrador" | "tecnico" | "recepcion";
+export type RolUsuario = "ADMIN" | "ENCARGADO" | "TECNICO";
 
 export function puedeAcceder(rol: RolUsuario | string, pathname: string) {
   const r = String(rol || "").toUpperCase();
