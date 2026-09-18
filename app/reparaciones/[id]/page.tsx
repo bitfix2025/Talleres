@@ -1,3 +1,4 @@
+// Vercel sync: código corregido en main
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
