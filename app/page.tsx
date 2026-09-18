@@ -424,7 +424,7 @@ export default function Home() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 titulo="Recibidos"
-                valor={recibidos}
+                valor={String(recibidos)}
                 descripcion="Esperando diagnóstico"
                 icon={<ClipboardCheck size={20} />}
                 iconClass="bg-blue-50 text-blue-600"
@@ -433,7 +433,7 @@ export default function Home() {
 
               <MetricCard
                 titulo="En reparación"
-                valor={enReparacion}
+                valor={String(enReparacion)}
                 descripcion="Trabajos activos"
                 icon={<Wrench size={20} />}
                 iconClass="bg-purple-50 text-purple-600"
@@ -442,7 +442,7 @@ export default function Home() {
 
               <MetricCard
                 titulo="Listos"
-                valor={listos}
+                valor={String(listos)}
                 descripcion="Esperando entrega"
                 icon={<CheckCircle2 size={20} />}
                 iconClass="bg-emerald-50 text-emerald-600"
@@ -451,7 +451,7 @@ export default function Home() {
 
               <MetricCard
                 titulo="Entregas"
-                valor={entregados}
+                valor={String(entregados)}
                 descripcion="Equipos entregados"
                 icon={<WalletCards size={20} />}
                 iconClass="bg-orange-50 text-orange-600"
