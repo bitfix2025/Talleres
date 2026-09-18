@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
+  LayoutPanel de control,
   Wrench,
   Users,
   Smartphone,
@@ -157,8 +157,8 @@ export default function Home() {
               </p>
 
               <SidebarItem
-                icon={<LayoutDashboard size={18} />}
-                label="Dashboard"
+                icon={<LayoutPanel de control size={18} />}
+                label="Panel de control"
                 activo
                 onClick={() => irA("/")}
               />
@@ -287,7 +287,7 @@ export default function Home() {
           <header className="hidden h-20 items-center justify-between border-b border-gray-200/80 bg-white px-8 lg:flex">
             <div>
               <p className="text-sm font-bold text-gray-950">
-                Dashboard
+                Panel de control
               </p>
 
               <p className="mt-0.5 text-xs text-gray-400">
