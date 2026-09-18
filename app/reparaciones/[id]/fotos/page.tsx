@@ -661,6 +661,20 @@ export default function ChecklistPage() {
     };
   }, [ordenId]);
 
+  const abrirFotosCelular = async () => {
+    try {
+      setMensaje("");
+      const r = await fetch("/api/fotos-movil/token?ordenId=" + ordenIdNumero);
+      const d = await r.json();
+      if (!r.ok || !d.token) throw new Error(d.error || "No se pudo generar el acceso móvil.");
+      const url = window.location.origin + "/reparaciones/" + ordenIdNumero + "/fotos-movil?token=" + encodeURIComponent(d.token);
+      setQrUrl(url);
+      setQrAbierto(true);
+    } catch (e:any) {
+      setMensaje(e?.message || "No se pudo generar el QR.");
+    }
+  };
+
   const subirFoto = async (
     tipo: string,
     archivo: File
@@ -1200,6 +1214,30 @@ export default function ChecklistPage() {
 
                     </div>
                   </div>
+
+                  {!bloqueado && (
+                    <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-5">
+                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-sm font-black text-green-900">📱 Tomar fotos con el celular</p>
+                          <p className="mt-1 text-xs leading-5 text-green-800">Escaneá un QR, abrí la cámara en tu teléfono y las fotos se cargarán directamente en esta reparación.</p>
+                        </div>
+                        <button type="button" onClick={abrirFotosCelular} className="rounded-xl bg-green-700 px-5 py-3 text-sm font-bold text-white hover:bg-green-800">Mostrar QR</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {qrAbierto && qrUrl && (
+                    <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="text-left"><p className="text-sm font-black">Fotos desde el celular</p><p className="text-xs text-gray-500">Escaneá este QR con la cámara del teléfono.</p></div>
+                        <button type="button" onClick={()=>setQrAbierto(false)} className="rounded-lg px-3 py-1 text-sm font-bold text-gray-500 hover:bg-gray-100">Cerrar</button>
+                      </div>
+                      <img className="mx-auto mt-4 h-64 w-64 rounded-xl border border-gray-100 p-2" src={"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data="+encodeURIComponent(qrUrl)} alt="QR para fotos desde celular"/>
+                      <p className="mx-auto mt-3 max-w-xl break-all text-[10px] text-gray-400">{qrUrl}</p>
+                      <p className="mt-3 text-xs font-semibold text-amber-700">Si estás probando desde localhost, el teléfono debe poder acceder a la dirección de tu PC en la misma red. En Vercel funcionará con el dominio del taller.</p>
+                    </div>
+                  )}
 
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
