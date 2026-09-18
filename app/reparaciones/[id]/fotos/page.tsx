@@ -1402,9 +1402,11 @@ export default function ChecklistPage() {
                                     Agregar foto
                                   </span>
 
-                                  <span className="mt-1 text-xs text-gray-400">
-                                    Tomar o seleccionar
-                                  </span>
+                                  <span className="mt-1 text-xs text-gray-400">Elegí cómo cargar la foto</span>
+                                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); abrirSelectorFoto(tipo.id); }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-700">🖥️ Desde PC</button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); void abrirFotosCelular(); }} className="rounded-lg bg-green-700 px-3 py-2 text-xs font-bold text-white">📱 Desde celular / QR</button>
+                                  </div>
 
                                 </button>
 
