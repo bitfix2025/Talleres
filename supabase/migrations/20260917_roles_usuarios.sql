@@ -3,6 +3,7 @@ create type public.rol_usuario as enum ('administrador','tecnico','recepcion');
 create table if not exists public.perfiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nombre text,
+  email text,
   rol public.rol_usuario not null default 'tecnico',
   activo boolean not null default true,
   created_at timestamptz not null default now(),
@@ -18,8 +19,8 @@ as $$ select rol from public.perfiles where id=auth.uid() and activo=true limit 
 create or replace function public.crear_perfil_usuario()
 returns trigger language plpgsql security definer set search_path=public
 as $$ begin
-insert into public.perfiles(id,nombre,rol)
-values(new.id,coalesce(new.raw_user_meta_data->>'nombre',split_part(coalesce(new.email,''),'@',1)),'tecnico')
+insert into public.perfiles(id,nombre,email,rol)
+values(new.id,coalesce(new.raw_user_meta_data->>'nombre',split_part(coalesce(new.email,''),'@',1)),new.email,'tecnico')
 on conflict(id) do nothing;
 return new; end; $$;
 
