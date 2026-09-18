@@ -61,7 +61,7 @@ export default function ReparacionDetallePage(){
      setDiagnostico(textoDiagnostico);
      setNotas(textoNotas);
      setManoObra(data.presupuesto_mano_obra!=null?String(data.presupuesto_mano_obra):""); setContrasenaEquipo(data.contrasena_equipo||"");
-    const {data:td,error:te}=await supabase.from("perfiles").select("id,nombre,email,rol,activo").eq("activo",true).in("rol",["TECNICO","tecnico"]);
+    const {data:td,error:te}=await supabase.from("perfiles").select("id,nombre,rol,activo").eq("activo",true).in("rol",["TECNICO","tecnico"]);
      if(te) setError(`No se pudieron cargar los técnicos: ${te.message}`);
      setTecnicos((td||[]) as Tecnico[]);
     setTecnicoId((data as any).tecnico_id||"");
