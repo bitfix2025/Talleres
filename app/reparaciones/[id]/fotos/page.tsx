@@ -1411,7 +1411,8 @@ export default function ChecklistPage() {
                               }}
                             />
 
-                        )}
+                              </div>
+                            )}
 
                         </div>
                         );
