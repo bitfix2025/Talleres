@@ -39,7 +39,6 @@ export default function ReparacionDetallePage(){
   const [diagnostico,setDiagnostico]=useState(""),[notas,setNotas]=useState("");
   const [contrasenaEquipo,setContrasenaEquipo]=useState("");
   const [productos,setProductos]=useState<Producto[]>([]),[items,setItems]=useState<Item[]>([]);
-  const imprimirEtiqueta=()=>window.print();
   const [productoId,setProductoId]=useState(""),[cantidad,setCantidad]=useState("1"),[precioVenta,setPrecioVenta]=useState(""),[busqueda,setBusqueda]=useState("");
   const [manoObra,setManoObra]=useState(""),[seccion,setSeccion]=useState<"diagnostico"|"presupuesto"|"reparacion">("diagnostico"),[cargando,setCargando]=useState(true),[guardando,setGuardando]=useState(false),[error,setError]=useState(""),[mensaje,setMensaje]=useState("");
 
@@ -79,33 +78,8 @@ export default function ReparacionDetallePage(){
   return <main className="min-h-screen bg-[#f5f6f8] flex items-center justify-center"><Loader2 size={32} className="animate-spin"/></main>;
   if(!orden)return <main className="min-h-screen bg-[#f5f6f8] p-8"><button onClick={()=>router.push("/reparaciones")} className="inline-flex items-center gap-2"><ArrowLeft size={17}/> Volver</button><div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">{error||"No se pudo cargar la reparación."}</div></main>;
 
-  return <>
-    <style>{`
-      @media print {
-        @page { size: 90mm 65mm; margin: 0; }
-        body { margin: 0 !important; }
-      }
-    `}</style>
-    <div className="hidden print:block w-[90mm] min-h-[65mm] p-3 text-black bg-white">
-      <div className="border-2 border-black p-3">
-        <div className="text-center text-xl font-black">BITFIX</div>
-        <div className="mt-1 border-y border-black py-1 text-center text-lg font-black">
-          ORDEN #{String(orden.id).padStart(5,"0")}
-        </div>
-        <div className="mt-2 space-y-0.5 text-[10px] leading-4">
-          <div><b>CLIENTE:</b> {orden.cliente?.nombre || "-"}</div>
-          <div><b>EQUIPO:</b> {[orden.equipo?.marca,orden.equipo?.modelo].filter(Boolean).join(" ") || "-"}</div>
-          <div><b>IMEI:</b> {orden.equipo?.imei || "-"}</div>
-          <div><b>CLAVE:</b> {contrasenaEquipo || "-"}</div>
-        </div>
-        <div className="mt-2 border-t border-black pt-2 text-[10px] leading-4">
-          <b>PROBLEMA / TRABAJO:</b>
-          <div className="mt-1 whitespace-pre-wrap">{orden.falla_reportada || "-"}</div>
-        </div>
-      </div>
-    </div>
-    <main className="print:hidden min-h-screen bg-[#f3f7f5] text-gray-900"><div className="mx-auto max-w-[1200px] p-4 md:p-6">
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3"><div className="flex gap-2"><button onClick={imprimirEtiqueta} className="print:hidden inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold"><Printer size={17}/> Etiqueta técnico</button><button onClick={()=>router.push("/reparaciones")} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:border-[#16a34a] hover:text-[#15803d]"><ArrowLeft size={17}/> Volver</button><button onClick={imprimirEtiqueta} className="print:hidden rounded-xl border px-4 py-2 text-sm font-bold"><Printer size={16} className="mr-2 inline"/> Etiqueta técnico</button><button onClick={()=>router.push("/")} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:border-[#16a34a] hover:text-[#15803d]"><Home size={17}/> Inicio</button></div><span className="text-xs font-semibold text-gray-400">Orden #{orden.id}</span></div>
+  return <main className="min-h-screen bg-[#f3f7f5] text-gray-900"><div className="mx-auto max-w-[1200px] p-4 md:p-6">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3"><div className="flex gap-2"><button onClick={()=>router.push("/reparaciones")} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:border-[#16a34a] hover:text-[#15803d]"><ArrowLeft size={17}/> Volver</button><button onClick={()=>router.push("/")} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold shadow-sm hover:border-[#16a34a] hover:text-[#15803d]"><Home size={17}/> Inicio</button></div><span className="text-xs font-semibold text-gray-400">Orden #{orden.id}</span></div>
 
     <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-md"><div className="flex flex-col gap-5 p-6 md:p-8 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-3"><span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold">ORDEN #{orden.id}</span><span className={`rounded-full border px-3 py-1 text-xs font-bold ${estadoClase(orden.estado)}`}>{FLUJO.find(p=>p.key===normalizar(orden.estado))?.label||orden.estado}</span></div><h1 className="mt-4 text-3xl font-black tracking-tight md:text-4xl">Gestión de reparación</h1><p className="mt-2 text-sm text-gray-500">Diagnóstico, presupuesto, reparación y entrega.</p></div><div className="flex flex-wrap gap-2"><button onClick={()=>router.push(`/reparaciones/${orden.id}/checklist`)} className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold"><ClipboardCheck size={17}/> Checklist</button><button onClick={()=>router.push(`/reparaciones/${orden.id}/comprobante`)} className="inline-flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700"><Printer size={17}/> Imprimir recepción</button><button onClick={()=>router.push(`/reparaciones/${orden.id}/fotos`)} className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold"><ImageIcon size={17}/> Fotos</button><button onClick={()=>document.getElementById("presupuesto")?.scrollIntoView({behavior:"smooth"})} className="inline-flex items-center gap-2 rounded-xl bg-[#16a34a] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#15803d]"><Package size={17}/> Presupuesto</button></div></div>
       <div className="border-t border-green-100 bg-gradient-to-r from-green-50/80 via-white to-green-50/40 p-6 md:p-8"><div className="overflow-x-auto"><div className="flex min-w-[950px] items-center">{FLUJO.map((p,i)=>{const activo=i===posicion,done=posicion>i;return <div key={p.key} className="flex flex-1 items-center"><button disabled={guardando} onClick={()=>cambiarEstado(p.db)} className="group flex min-w-0 flex-col items-center text-center"><div className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-bold ${activo?"border-[#16a34a] bg-[#16a34a] text-white":done?"border-[#16a34a] bg-[#16a34a] text-white":"border-gray-300 bg-white text-gray-400"}`}>{done?<Check size={16}/>:i+1}</div><span className={`mt-2 max-w-[115px] text-[10px] font-bold uppercase ${activo?"text-[#15803d]":done?"text-[#15803d]":"text-gray-400"}`}>{p.label}</span></button>{i<FLUJO.length-1&&<div className={`mx-2 h-[2px] flex-1 ${done?"bg-[#86efac]":"bg-gray-200"}`}/>}</div>})}</div></div><div className="mt-5 flex flex-wrap gap-3">{siguiente&&<button disabled={guardando} onClick={avanzar} className="inline-flex items-center gap-2 rounded-xl bg-[#16a34a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#15803d]">{guardando?<Loader2 size={17} className="animate-spin"/>:<ArrowRight size={17}/>} Avanzar a {siguiente.label}</button>}{(esPresupuesto||normalizar(orden.estado)==="DIAGNOSTICO")&&<button onClick={()=>document.getElementById("presupuesto")?.scrollIntoView({behavior:"smooth"})} className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold"><Package size={17}/> Cargar presupuesto</button>}</div></div></section>
@@ -139,6 +113,5 @@ export default function ReparacionDetallePage(){
       </section>
     </div>
     <div className="py-8 text-center text-[11px] font-semibold tracking-wide text-gray-400">BITFIX TALLER · Gestión de reparación</div>
-    </main>
-  </>;
+  </div></main>;
 }
