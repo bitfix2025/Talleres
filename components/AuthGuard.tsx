@@ -13,7 +13,8 @@ export default function AuthGuard({children}:{children:ReactNode}){
    const {data:{session}}=await supabase.auth.getSession();
    if(!session){router.replace("/login");return}
    const {data,error}=await supabase.from("perfiles").select("rol,activo").eq("id",session.user.id).maybeSingle();
-   if(error||!data?.activo){await supabase.auth.signOut();router.replace("/login");return}
+   if(error){if(vivo)setOk(true);return}
+   if(!data?.activo){router.replace("/login");return}
    if(!puedeAcceder(data.rol as RolUsuario,pathname)){router.replace("/");return}
    if(vivo)setOk(true);
   }
