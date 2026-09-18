@@ -26,7 +26,7 @@ export default function FacturacionPage(){
   setLoading(true);setError("");
   const [o,i,v]=await Promise.all([
    supabase.from("ordenes_reparacion").select("id,estado,created_at,presupuesto_mano_obra").eq("taller_id",TALLER_ID).order("created_at",{ascending:false}),
-   supabase.from("presupuesto_reparacion_items").select("orden_id,cantidad,precio_unitario,costo_unitario").eq("taller_id",TALLER_ID),
+   supabase.from("presupuesto_reparacion_items").select("orden_id,cantidad,precio_unitario,costo_unitario"),
    supabase.from("ventas").select("id,total,ganancia,created_at,estado").eq("taller_id",TALLER_ID).eq("estado","COMPLETADA").order("created_at",{ascending:false})
   ]);
   if(o.error||i.error||v.error) setError(o.error?.message||i.error?.message||v.error?.message||"No se pudieron cargar los datos.");
