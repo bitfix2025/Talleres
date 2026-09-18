@@ -1374,10 +1374,13 @@ export default function ChecklistPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    abrirSelectorFoto(
-                                      tipo.id
-                                    )
+                                  onClick={() => {
+                                    const usarCelular = window.confirm("¿Querés tomar la foto con el celular?\n\nAceptar = mostrar QR para el celular\nCancelar = usar la cámara/archivo de esta PC");
+                                    if (usarCelular) {
+                                      void abrirFotosCelular();
+                                    } else {
+                                      abrirSelectorFoto(tipo.id);
+                                    }
                                   }
                                   disabled={
                                     bloqueado ||
