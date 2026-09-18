@@ -353,8 +353,8 @@ export default function ReparacionesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f6f8] text-gray-900">
-      <div className="mx-auto max-w-[1500px] p-5 md:p-8">
+    <main className="min-h-screen bg-[#f7f8f7] text-gray-900">
+      <div className="mx-auto max-w-[1480px] p-4 md:p-7">
 
         {/* =====================================
             ENCABEZADO
@@ -367,7 +367,7 @@ export default function ReparacionesPage() {
               Gestión del taller
             </p>
 
-            <h1 className="text-3xl font-bold tracking-tight text-gray-950 md:text-4xl">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-950 md:text-3xl">
               Órdenes de reparación
             </h1>
 
@@ -427,7 +427,7 @@ export default function ReparacionesPage() {
             MÉTRICAS
         ====================================== */}
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard titulo="Recibidos" valor={recibidos} descripcion="Esperando diagnóstico" icon={<Clock3 size={19} />} clase="blue" />
           <MetricCard titulo="En reparación" valor={enReparacion} descripcion="Trabajos activos" icon={<Wrench size={19} />} clase="purple" />
           <MetricCard titulo="Listos para entregar" valor={reparados} descripcion="Reparaciones terminadas" icon={<CheckCircle2 size={19} />} clase="green" />
@@ -573,7 +573,7 @@ export default function ReparacionesPage() {
             LISTADO
         ====================================== */}
 
-        <div className="mt-6 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
 
           <div className="flex flex-col gap-3 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between">
 
@@ -694,238 +694,64 @@ export default function ReparacionesPage() {
               </div>
             )}
 
-          {/* TABLA */}
-
-          {!cargando &&
-            ordenesFiltradas.length > 0 && (
-              <div className="overflow-x-auto">
-
-                <table className="w-full min-w-[950px]">
-
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50/70 text-left">
-
-                      <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                        Orden
-                      </th>
-
-                      <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                        Cliente
-                      </th>
-
-                      <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                        Equipo
-                      </th>
-
-                      <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                        Problema
-                      </th>
-
-                      <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                        Estado
-                      </th>
-
-                      <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                        Fecha
-                      </th>
-
-                      <th className="px-5 py-3"></th>
-
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-100">
-
-                    {ordenesFiltradas.map(
-                      (orden) => (
-                        <tr
-                          key={orden.id}
-                          onClick={() =>
-                            abrirOrden(orden.id)
-                          }
-                          className="group cursor-pointer transition hover:bg-[#f7faf8]"
-                        >
-
-                          {/* ORDEN */}
-
-                          <td className="px-5 py-4">
-
-                            <div className="flex items-center gap-3">
-
-                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-700 transition group-hover:bg-[#16a34a] group-hover:text-white">
-                                <Wrench size={18} />
-                              </div>
-
-                              <div>
-                                <p className="text-sm font-bold text-gray-900">
-                                  #
-                                  {String(
-                                    orden.id
-                                  ).padStart(
-                                    4,
-                                    "0"
-                                  )}
-                                </p>
-
-                                <p className="mt-0.5 text-[11px] text-gray-400">
-                                  Orden de reparación
-                                </p>
-                              </div>
-
-                            </div>
-
-                          </td>
-
-                          {/* CLIENTE */}
-
-                          <td className="px-5 py-4">
-
-                            <div className="flex items-center gap-2">
-
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-                                <User
-                                  size={15}
-                                  className="text-gray-500"
-                                />
-                              </div>
-
-                              <div>
-
-                                <p className="text-sm font-semibold text-gray-900">
-                                  {orden.cliente?.nombre ||
-                                    "Sin nombre"}
-                                </p>
-
-                                {orden.cliente?.telefono && (
-                                  <p className="mt-0.5 text-xs text-gray-400">
-                                    {
-                                      orden
-                                        .cliente
-                                        .telefono
-                                    }
-                                  </p>
-                                )}
-
-                              </div>
-
-                            </div>
-
-                          </td>
-
-                          {/* EQUIPO */}
-
-                          <td className="px-5 py-4">
-
-                            <div className="flex items-center gap-3">
-
-                              <Smartphone
-                                size={19}
-                                className="text-gray-400"
-                              />
-
-                              <div>
-
-                                <p className="text-sm font-semibold text-gray-900">
-                                  {orden.equipo?.modelo ||
-                                    "iPhone"}
-                                </p>
-
-                                <div className="mt-0.5 flex items-center gap-2">
-
-                                  {orden.equipo?.capacidad && (
-                                    <span className="text-xs text-gray-400">
-                                      {
-                                        orden
-                                          .equipo
-                                          .capacidad
-                                      }
-                                    </span>
-                                  )}
-
-                                  {orden.equipo?.imei && (
-                                    <>
-                                      <span className="text-gray-300">
-                                        •
-                                      </span>
-
-                                      <span className="text-xs text-gray-400">
-                                        IMEI:{" "}
-                                        {
-                                          orden
-                                            .equipo
-                                            .imei
-                                        }
-                                      </span>
-                                    </>
-                                  )}
-
-                                </div>
-
-                              </div>
-
-                            </div>
-
-                          </td>
-
-                          {/* PROBLEMA */}
-
-                          <td className="max-w-[250px] px-5 py-4">
-
-                            <p className="truncate text-sm text-gray-600">
-                              {orden.falla_reportada ||
-                                "Sin problema indicado"}
-                            </p>
-
-                          </td>
-
-                          {/* ESTADO */}
-
-                          <td className="px-5 py-4">
-
-                            <span
-                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${estadoClase(
-                                orden.estado
-                              )}`}
-                            >
-                              {estadoTexto(
-                                orden.estado
-                              )}
-                            </span>
-
-                          </td>
-
-                          {/* FECHA */}
-
-                          <td className="whitespace-nowrap px-5 py-4">
-
-                            <p className="text-xs font-medium text-gray-600">
-                              {formatearFecha(
-                                orden.created_at
-                              )}
-                            </p>
-
-                          </td>
-
-                          {/* ACCIÓN */}
-
-                          <td className="px-5 py-4 text-right">
-
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-gray-300 transition group-hover:border-green-200 group-hover:bg-green-50 group-hover:text-green-700">
-                              <ChevronRight size={18} />
-                            </div>
-
-                          </td>
-
-                        </tr>
-                      )
-                    )}
-
-                  </tbody>
-
-                </table>
-
+          {/* REPARACIONES */}
+          {!cargando && ordenesFiltradas.length > 0 && (
+            <div className="p-4 md:p-5">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {ordenesFiltradas.map((orden) => (
+                  <button
+                    key={orden.id}
+                    type="button"
+                    onClick={() => abrirOrden(orden.id)}
+                    className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-green-200 hover:shadow-lg"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-500 to-emerald-300 opacity-0 transition group-hover:opacity-100" />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-green-700">
+                          <Smartphone size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-gray-950">
+                            {orden.equipo?.modelo || "iPhone"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-gray-400">
+                            Orden #{String(orden.id).padStart(4, "0")}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold ${estadoClase(orden.estado)}`}>
+                        {estadoTexto(orden.estado)}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 rounded-xl bg-gray-50 p-3">
+                      <div className="flex items-center gap-2">
+                        <User size={15} className="text-gray-400" />
+                        <p className="truncate text-sm font-semibold text-gray-800">
+                          {orden.cliente?.nombre || "Sin cliente"}
+                        </p>
+                      </div>
+                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-500">
+                        {orden.falla_reportada || "Sin problema indicado"}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <Clock3 size={14} />
+                        {formatearFecha(orden.created_at)}
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
+                        Ver reparación
+                        <ChevronRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
         </div>
 
@@ -985,7 +811,7 @@ function MetricCard({
   const estilo = estilos[clase];
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div className="rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:p-5">
 
       <div className="flex items-start justify-between">
 
