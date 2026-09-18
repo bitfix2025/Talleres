@@ -10,14 +10,14 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) return NextResponse.json({ error: "Sesión no válida." }, { status: 401 });
     const { data: perfil, error: perfilError } = await supabase.from("perfiles").select("rol,activo").eq("id", user.id).maybeSingle();
-    if (perfilError || String(perfil?.rol || "").toUpperCase() !== "ADMIN" || !perfil.activo) return NextResponse.json({ error: "Solo un administrador activo puede crear usuarios." }, { status: 403 });
+    if (perfilError || !perfil || String(perfil.rol || "").toUpperCase() !== "ADMIN" || !perfil.activo) return NextResponse.json({ error: "Solo un administrador activo puede crear usuarios." }, { status: 403 });
     const body = await request.json();
     const nombre = String(body.nombre ?? "").trim();
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
     const rolRecibido = String(body.rol ?? "");
     const rol = rolRecibido.toUpperCase() === "RECEPCION" ? "ENCARGADO" : rolRecibido.toUpperCase();
-    if (!nombre || !email || !password || !["TECNICO","ENCARGADO","tecnico","recepcion","RECEPCION"].includes(rol)) return NextResponse.json({ error: "Completá nombre, correo, contraseña y rol." }, { status: 400 });
+    if (!nombre || !email || !password || !["TECNICO","ENCARGADO"].includes(rol)) return NextResponse.json({ error: "Completá nombre, correo, contraseña y rol." }, { status: 400 });
     if (password.length < 6) return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres." }, { status: 400 });
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceKey) return NextResponse.json({ error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY en Vercel." }, { status: 500 });
