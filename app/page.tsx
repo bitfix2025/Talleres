@@ -236,7 +236,7 @@ export default function Home() {
               <SidebarItem
                 icon={<Settings size={18} />}
                 label="Configuración"
-                onClick={() => irA("/configuracion")}
+                onClick={() => irA("/configuracion/usuarios")}
                 visible={String(rol).toUpperCase()==="ADMIN"}
               />
             </nav>
