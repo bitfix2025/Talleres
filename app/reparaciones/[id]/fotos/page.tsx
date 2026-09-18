@@ -1411,12 +1411,12 @@ export default function ChecklistPage() {
                               }}
                             />
 
-                          </div>
                         )}
 
                         </div>
-                      )}
-
+                        );
+                      }
+                    )}
                   </div>
 
                   {!bloqueado && (
