@@ -9,6 +9,12 @@ type Equipo = { id: string; marca?: string | null; modelo?: string | null; imei?
 type Cliente = { id: string; nombre: string; telefono?: string | null };
 type Orden = { id: string; cliente_id: string; equipo_id?: string | null; created_at: string; estado?: string | null; falla_reportada?: string | null };
 
+const marcaVisible = (marca?: string | null) => {
+  const valor = (marca || "").trim().toLowerCase();
+  if (valor === "apple" || valor === "manzana") return "Apple";
+  return marca || "";
+};
+
 export default function EquiposPage() {
   const router = useRouter();
   const [equipos, setEquipos] = useState<Equipo[]>([]);
@@ -83,7 +89,7 @@ export default function EquiposPage() {
             const ultima = historial[0];
             return <button key={e.id} onClick={() => router.push("/equipos/" + e.id)} className="group rounded-2xl border border-gray-200/80 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-lg">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-green-700"><Smartphone size={20}/></div><div className="min-w-0"><h2 className="truncate font-bold text-gray-950">{(e.marca || "").toLowerCase() === "manzana" ? "Apple" : (e.marca || e.modelo ? ((e.marca ? e.marca + " " : "") + (e.modelo || "")) : "Equipo")}</h2><p className="mt-0.5 text-xs text-gray-500">{e.imei ? "IMEI: " + e.imei : "IMEI no registrado"}</p></div></div>
+                <div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-green-700"><Smartphone size={20}/></div><div className="min-w-0"><h2 className="truncate font-bold text-gray-950">{e.marca || e.modelo ? ((marcaVisible(e.marca) ? marcaVisible(e.marca) + " " : "") + (e.modelo || "")) : "Equipo"}</h2><p className="mt-0.5 text-xs text-gray-500">{e.imei ? "IMEI: " + e.imei : "IMEI no registrado"}</p></div></div>
                 <ChevronRight size={18} className="mt-1 shrink-0 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-green-700"/>
               </div>
               <div className="mt-4 rounded-xl bg-gray-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Cliente</p><p className="mt-1 flex items-center gap-2 text-sm font-semibold"><UserRound size={14} className="text-gray-400"/>{cliente?.nombre || "Sin cliente"}</p><p className="mt-1 text-xs text-gray-500">{cliente?.telefono || "Sin teléfono"}</p></div>
