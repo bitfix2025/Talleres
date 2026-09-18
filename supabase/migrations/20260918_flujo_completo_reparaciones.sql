@@ -167,3 +167,46 @@ GRANT EXECUTE ON FUNCTION public.confirmar_reparacion_repuestos(bigint) TO authe
 -- Compatibilidad: el frontend usa observaciones para las notas del pago.
 ALTER TABLE public.pagos_reparacion
   ADD COLUMN IF NOT EXISTS observaciones text;
+
+
+CREATE OR REPLACE FUNCTION public.iniciar_reparacion(p_orden_id bigint)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_estado text;
+BEGIN
+  SELECT estado INTO v_estado
+  FROM public.ordenes_reparacion
+  WHERE id = p_orden_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'La reparación no existe';
+  END IF;
+
+  IF v_estado <> 'APROBADO' THEN
+    RAISE EXCEPTION 'La reparación debe estar APROBADO para comenzar';
+  END IF;
+
+  PERFORM public.confirmar_reparacion_repuestos(p_orden_id);
+
+  UPDATE public.ordenes_reparacion
+  SET estado = 'EN REPARACIÓN'
+  WHERE id = p_orden_id
+    AND estado = 'APROBADO';
+
+  PERFORM public.registrar_historial_reparacion(
+    p_orden_id,
+    'ESTADO',
+    'APROBADO',
+    'EN REPARACIÓN',
+    'Presupuesto aprobado. Repuestos consumidos del inventario y reparación iniciada.'
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.iniciar_reparacion(bigint) TO anon;
+GRANT EXECUTE ON FUNCTION public.iniciar_reparacion(bigint) TO authenticated;
