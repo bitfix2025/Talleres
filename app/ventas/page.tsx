@@ -178,118 +178,65 @@ export default function VentasPage() {
     setError("");
 
     try {
-      const {
-        data: ventasData,
-        error: errorVentas,
-      } = await supabase
-        .from("ventas")
-        .select(`
-          *,
-          cliente:cliente_id(
-            id,
-            nombre,
-            telefono,
-            email
-          ),
-          detalles:venta_detalles(
-            id,
-            venta_id,
-            producto_id,
-            producto_nombre,
-            cantidad,
-            costo_unitario,
-            precio_unitario,
-            subtotal,
-            ganancia
-          )
-        `)
-        .eq("taller_id", TALLER_ID)
-        .order("created_at", {
-          ascending: false,
-        });
+      // Cargamos las tablas por separado para no depender de relaciones
+      // embebidas de PostgREST y evitar que una relación mal configurada
+      // impida abrir toda la pantalla.
+      const [
+        ventasRes,
+        detallesRes,
+        productosRes,
+        clientesRes,
+      ] = await Promise.all([
+        supabase
+          .from("ventas")
+          .select("*")
+          .eq("taller_id", TALLER_ID)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("venta_detalles")
+          .select("id,venta_id,producto_id,producto_nombre,cantidad,costo_unitario,precio_unitario,subtotal,ganancia"),
+        supabase
+          .from("productos")
+          .select("id,nombre,categoria,marca,modelo,sku,codigo_barras,costo,precio,stock_actual,activo")
+          .eq("taller_id", TALLER_ID)
+          .eq("activo", true)
+          .order("nombre", { ascending: true }),
+        supabase
+          .from("clientes")
+          .select("id,nombre,telefono,email")
+          .eq("taller_id", TALLER_ID)
+          .order("nombre", { ascending: true }),
+      ]);
 
-      if (errorVentas) {
-        throw new Error(
-          `Error cargando ventas: ${errorVentas.message}`
-        );
-      }
+      const primero = ventasRes.error || detallesRes.error || productosRes.error || clientesRes.error;
+      if (primero) throw new Error(primero.message);
 
-      setVentas((ventasData as Venta[]) || []);
+      const clientesData = (clientesRes.data || []) as Cliente[];
+      const detallesData = (detallesRes.data || []) as VentaDetalle[];
+      const clientesMap = new Map(clientesData.map(c => [Number(c.id), c]));
 
-      const {
-        data: productosData,
-        error: errorProductos,
-      } = await supabase
-        .from("productos")
-        .select(`
-          id,
-          nombre,
-          categoria,
-          marca,
-          modelo,
-          sku,
-          codigo_barras,
-          costo,
-          precio,
-          stock_actual,
-          activo
-        `)
-        .eq("taller_id", TALLER_ID)
-        .eq("activo", true)
-        .order("nombre", {
-          ascending: true,
-        });
+      const ventasData = (ventasRes.data || []).map((venta: any) => ({
+        ...venta,
+        cliente: venta.cliente_id == null ? null : clientesMap.get(Number(venta.cliente_id)) || null,
+        detalles: detallesData.filter(d => Number(d.venta_id) === Number(venta.id)),
+      })) as Venta[];
 
-      if (errorProductos) {
-        throw new Error(
-          `Error cargando productos: ${errorProductos.message}`
-        );
-      }
-
+      setVentas(ventasData);
+      setClientes(clientesData);
       setProductos(
-        (productosData || []).map(
-          (producto: any) => ({
-            id: Number(producto.id),
-            nombre: producto.nombre || "",
-            categoria: producto.categoria ?? null,
-            marca: producto.marca ?? null,
-            modelo: producto.modelo ?? null,
-            sku: producto.sku ?? null,
-            codigo_barras:
-              producto.codigo_barras ?? null,
-            costo: numero(producto.costo),
-            precio: numero(producto.precio),
-            stock_actual:
-              numero(producto.stock_actual),
-            activo: Boolean(producto.activo),
-          })
-        )
-      );
-
-      const {
-        data: clientesData,
-        error: errorClientes,
-      } = await supabase
-        .from("clientes")
-        .select(`
-          id,
-          nombre,
-          telefono,
-          email
-        `)
-        .eq("taller_id", TALLER_ID)
-        .order("nombre", {
-          ascending: true,
-        });
-
-      if (errorClientes) {
-        throw new Error(
-          `Error cargando clientes: ${errorClientes.message}`
-        );
-      }
-
-      setClientes(
-        (clientesData as Cliente[]) || []
+        (productosRes.data || []).map((producto: any) => ({
+          id: Number(producto.id),
+          nombre: producto.nombre || "",
+          categoria: producto.categoria ?? null,
+          marca: producto.marca ?? null,
+          modelo: producto.modelo ?? null,
+          sku: producto.sku ?? null,
+          codigo_barras: producto.codigo_barras ?? null,
+          costo: numero(producto.costo),
+          precio: numero(producto.precio),
+          stock_actual: numero(producto.stock_actual),
+          activo: Boolean(producto.activo),
+        }))
       );
 
       if (
