@@ -40,6 +40,30 @@ export default function Home() {
   const [busqueda, setBusqueda] = useState("");
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
   const [rol, setRol] = useState<RolUsuario>("ADMIN");
+  const [ordenes, setOrdenes] = useState<any[]>([]);
+  const [cargandoReparaciones, setCargandoReparaciones] = useState(true);
+
+  useEffect(() => {
+    const cargarReparaciones = async () => {
+      setCargandoReparaciones(true);
+      const { data } = await supabase
+        .from("ordenes_reparacion")
+        .select("id,estado,falla_reportada,created_at,clientes(nombre),equipos(marca,modelo)")
+        .order("created_at", { ascending: false });
+      setOrdenes(data || []);
+      setCargandoReparaciones(false);
+    };
+    cargarReparaciones();
+  }, []);
+
+  const normalizarEstado = (estado: string | null) =>
+    String(estado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const recibidos = ordenes.filter(o => normalizarEstado(o.estado) === "recibido").length;
+  const enReparacion = ordenes.filter(o => ["diagnostico","presupuestado","esperando aprobacion","aprobado","en reparacion"].includes(normalizarEstado(o.estado))).length;
+  const listos = ordenes.filter(o => ["listo para entregar","reparado"].includes(normalizarEstado(o.estado))).length;
+  const entregados = ordenes.filter(o => normalizarEstado(o.estado) === "entregado").length;
+
   const [saludo, setSaludo] = useState("Buenos días");
   useEffect(() => { const actualizarSaludo = () => { const h = new Date().getHours(); setSaludo(h >= 5 && h < 12 ? "Buenos días" : h >= 12 && h < 19 ? "Buenas tardes" : "Buenas noches"); }; actualizarSaludo(); const id = window.setInterval(actualizarSaludo, 60000); return () => window.clearInterval(id); }, []);
   useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser(); if(!user)return; const {data}=await supabase.from("perfiles").select("rol").eq("id",user.id).maybeSingle(); if(data?.rol)setRol(data.rol as RolUsuario)})()},[]);
@@ -400,7 +424,7 @@ export default function Home() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 titulo="Recibidos"
-                valor="0"
+                valor={recibidos}
                 descripcion="Esperando diagnóstico"
                 icon={<ClipboardCheck size={20} />}
                 iconClass="bg-blue-50 text-blue-600"
@@ -409,7 +433,7 @@ export default function Home() {
 
               <MetricCard
                 titulo="En reparación"
-                valor="0"
+                valor={enReparacion}
                 descripcion="Trabajos activos"
                 icon={<Wrench size={20} />}
                 iconClass="bg-purple-50 text-purple-600"
@@ -418,7 +442,7 @@ export default function Home() {
 
               <MetricCard
                 titulo="Listos"
-                valor="0"
+                valor={listos}
                 descripcion="Esperando entrega"
                 icon={<CheckCircle2 size={20} />}
                 iconClass="bg-emerald-50 text-emerald-600"
@@ -427,8 +451,8 @@ export default function Home() {
 
               <MetricCard
                 titulo="Entregas"
-                valor="0"
-                descripcion="Para entregar hoy"
+                valor={entregados}
+                descripcion="Equipos entregados"
                 icon={<WalletCards size={20} />}
                 iconClass="bg-orange-50 text-orange-600"
                 onClick={() => irA("/reparaciones")}
@@ -447,7 +471,7 @@ export default function Home() {
                       </h2>
 
                       <span className="rounded-full bg-[#e9f8f1] px-2 py-0.5 text-[10px] font-bold text-[#148f5c]">
-                        0
+                        {ordenes.length}
                       </span>
                     </div>
 
@@ -497,41 +521,22 @@ export default function Home() {
                     </thead>
 
                     <tbody>
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-5 py-16"
-                        >
-                          <div className="flex flex-col items-center justify-center text-center">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e9f8f1]">
-                              <Wrench
-                                size={24}
-                                className="text-[#18a66b]"
-                              />
-                            </div>
-
-                            <h3 className="mt-4 text-sm font-bold text-gray-900">
-                              No hay reparaciones todavía
-                            </h3>
-
-                            <p className="mt-1 max-w-sm text-xs leading-5 text-gray-400">
-                              Cuando recibas un iPhone, la orden aparecerá automáticamente en este listado.
-                            </p>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                irA("/reparaciones/nueva")
-                              }
-                              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#18a66b] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#148f5c] active:scale-95"
-                            >
-                              <Plus size={15} />
-
-                              Crear reparación
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                      {ordenes.slice(0, 8).map((orden: any) => {
+                        const cliente = Array.isArray(orden.clientes) ? orden.clientes[0] : orden.clientes;
+                        const equipo = Array.isArray(orden.equipos) ? orden.equipos[0] : orden.equipos;
+                        return (
+                          <tr key={orden.id} onClick={() => router.push(`/reparaciones/${orden.id}`)} className="cursor-pointer border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                            <td className="px-5 py-4 text-sm font-bold">#{orden.id}</td>
+                            <td className="px-5 py-4 text-sm font-semibold">{[equipo?.marca, equipo?.modelo].filter(Boolean).join(" ") || "Sin equipo"}</td>
+                            <td className="max-w-[280px] truncate px-5 py-4 text-sm text-gray-500">{orden.falla_reportada || "Sin diagnóstico registrado"}</td>
+                            <td className="px-5 py-4 text-sm font-semibold">{orden.estado || "Sin estado"}</td>
+                            <td className="px-5 py-4 text-sm text-gray-500">{orden.created_at ? new Date(orden.created_at).toLocaleDateString("es-AR") : "-"}</td>
+                          </tr>
+                        );
+                      })}
+                      {!cargandoReparaciones && ordenes.length === 0 && (
+                        <tr><td colSpan={5} className="px-5 py-16 text-center text-sm text-gray-400">No hay reparaciones todavía.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -652,28 +657,28 @@ export default function Home() {
                 <div className="mt-6 space-y-5">
                   <StatusBar
                     nombre="Recibidos"
-                    cantidad="0"
+                    cantidad={String(recibidos)}
                     icon={<ClipboardCheck size={14} />}
                     className="bg-blue-500"
                   />
 
                   <StatusBar
                     nombre="Diagnóstico"
-                    cantidad="0"
+                    cantidad={String(ordenes.filter(o=>normalizarEstado(o.estado)==="diagnostico").length)}
                     icon={<Search size={14} />}
                     className="bg-yellow-500"
                   />
 
                   <StatusBar
                     nombre="En reparación"
-                    cantidad="0"
+                    cantidad={String(enReparacion)}
                     icon={<Wrench size={14} />}
                     className="bg-purple-500"
                   />
 
                   <StatusBar
                     nombre="Listos"
-                    cantidad="0"
+                    cantidad={String(listos)}
                     icon={<CheckCircle2 size={14} />}
                     className="bg-[#18a66b]"
                   />
