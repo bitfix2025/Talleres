@@ -28,6 +28,7 @@ export default function NuevaReparacionPage() {
   const [color, setColor] = useState("");
   const [capacidad, setCapacidad] = useState("");
   const [bateria, setBateria] = useState("");
+  const [contrasenaEquipo, setContrasenaEquipo] = useState("");
   const [fallaReportada, setFallaReportada] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -172,7 +173,7 @@ export default function NuevaReparacionPage() {
 
       const orden = await supabase.from("ordenes_reparacion").insert({
         taller_id: tallerId, cliente_id: cliente.id, equipo_id: equipo.id, estado: "RECIBIDO",
-        falla_reportada: fallaReportada.trim(), observaciones: observaciones.trim() || null,
+        falla_reportada: fallaReportada.trim(), observaciones: observaciones.trim() || null, contrasena_equipo: contrasenaEquipo.trim() || null,
       }).select().single();
 
       if (orden.error) throw new Error(`No se pudo crear la orden: ${orden.error.message}`);
@@ -218,7 +219,7 @@ export default function NuevaReparacionPage() {
               ) : (
                 <div className="mt-4 rounded-2xl border border-green-200 bg-green-50/50 p-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-green-700"><UserRound size={19}/></div><div><p className="font-bold">{clienteSeleccionado?.nombre || "Nuevo cliente"}</p><p className="text-xs text-gray-500">DNI: {clienteSeleccionado?.dni || clienteDni || "Sin DNI"} · {clienteSeleccionado?.telefono || clienteTelefono || "Sin teléfono"}</p></div></div><button onClick={() => {setClienteSeleccionado(null);setModoNuevoCliente(false);setModoNuevoEquipo(false);setEquipoSeleccionado(null);setEquipos([])}} className="text-xs font-bold text-gray-500 hover:text-green-700">Cambiar</button></div>
-                  {modoNuevoCliente && <div className="mt-4 grid gap-3 md:grid-cols-3"><input value={clienteNombre} onChange={e=>setClienteNombre(e.target.value)} placeholder="Nombre completo *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/><input value={clienteDni} onChange={e=>setClienteDni(e.target.value)} placeholder="DNI *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/><input value={clienteTelefono} onChange={e=>setClienteTelefono(e.target.value)} placeholder="Teléfono *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/></div>}
+                  {modoNuevoCliente && <div className="mt-4 grid gap-3 md:grid-cols-3"><input value={clienteNombre} onChange={e=>setClienteNombre(e.target.value)} placeholder="Nombre completo *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/><input value={clienteDni} onChange={e=>setClienteDni(e.target.value)} placeholder="DNI *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/><input value={clienteTelefono} onChange={e=>setClienteTelefono(e.target.value)} placeholder="Teléfono *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/><input value={contrasenaEquipo} onChange={e=>setContrasenaEquipo(e.target.value)} placeholder="Clave / contraseña del equipo" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/></div>}
                 </div>
               )}
             </section>
