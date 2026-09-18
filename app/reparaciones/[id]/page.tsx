@@ -107,11 +107,8 @@ export default function ReparacionDetallePage(){
   const guardarPresupuesto=async(enviar:boolean)=>{if(!orden)return;const mano=Math.max(0,Number(manoObra)||0);if(items.length===0&&mano<=0)return setError("Agregá al menos un repuesto o una mano de obra.");setGuardando(true);setError("");const{error:e}=await supabase.from("ordenes_reparacion").update({presupuesto_mano_obra:mano,estado:enviar?"ESPERANDO APROBACIÓN":"PRESUPUESTADO"}).eq("id",orden.id);if(e)setError(`No se pudo guardar el presupuesto: ${e.message}`);else{setOrden({...orden,presupuesto_mano_obra:mano,estado:enviar?"ESPERANDO APROBACIÓN":"PRESUPUESTADO"});setMensaje(enviar?"Presupuesto enviado a aprobación.":"Presupuesto guardado correctamente.");}setGuardando(false);};
 
   const consumirRepuestosYComenzar=async()=>{if(!orden||guardando)return;setGuardando(true);setError("");setMensaje("");try{
-    const{error:ue}=await supabase.rpc("confirmar_reparacion_repuestos",{p_orden_id:orden.id});
+    const{error:ue}=await supabase.rpc("iniciar_reparacion",{p_orden_id:orden.id});
     if(ue)throw new Error(ue.message);
-    const{error:se}=await supabase.from("ordenes_reparacion").update({estado:"EN REPARACIÓN"}).eq("id",orden.id).eq("estado","APROBADO");
-    if(se)throw new Error(se.message);
-    await supabase.rpc("registrar_historial_reparacion",{p_orden_id:orden.id,p_tipo:"ESTADO",p_estado_anterior:"APROBADO",p_estado_nuevo:"EN REPARACIÓN",p_descripcion:"Presupuesto aprobado. Repuestos consumidos del inventario y reparación iniciada."});
     setOrden({...orden,estado:"EN REPARACIÓN"});setMensaje("Repuestos registrados y descontados del inventario. La reparación comenzó.");await cargar();
   }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setGuardando(false);}};
 
