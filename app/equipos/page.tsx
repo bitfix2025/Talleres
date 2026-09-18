@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {\n  ArrowLeft, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Smartphone, UserRound, Wrench, ChevronRight, Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -55,7 +55,7 @@ export default function EquiposPage() {
   const ordenesEquipo = (id: string) => ordenes.filter(o => o.equipo_id === id);
 
   return (
-    <main className="min-h-screen bg-[#f7f8f7] px-4 py-5 text-gray-900 md:px-7 md:py-7">
+    <main className="min-h-screen bg-[#f7f8f7] px-4 py-5 text-gray-900 md:px-7 md:py-7"><button type="button" onClick={()=>router.back()} className="mb-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"><ArrowLeft size={16}/> Volver</button>
       <div className="mx-auto max-w-[1480px]">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
