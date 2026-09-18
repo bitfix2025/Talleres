@@ -146,85 +146,59 @@ export default function ComprasPage() {
     setError("");
 
     try {
-      const { data: ordenesData, error: errorOrdenes } =
-        await supabase
+      // Cargamos las tablas por separado. Esto evita depender de relaciones
+      // embebidas de PostgREST que pueden variar según la configuración de Supabase.
+      const [
+        ordenesRes,
+        proveedoresRes,
+        productosRes,
+        detallesRes,
+      ] = await Promise.all([
+        supabase
           .from("ordenes_compra")
-          .select(
-            `
-            *,
-            proveedor:proveedor_id(
-              id,
-              nombre,
-              email,
-              telefono,
-              direccion,
-              ciudad,
-              activo,
-              created_at,
-              taller_id
-            ),
-            detalles:ordenes_compra_detalles(
-              id,
-              orden_id,
-              producto_id,
-              cantidad,
-              precio_unitario,
-              subtotal,
-              cantidad_recibida,
-              producto:producto_id(
-                id,
-                nombre,
-                precio,
-                costo,
-                stock_actual
-              )
-            )
-          `
-          )
+          .select("*")
           .eq("taller_id", TALLER_ID)
-          .order("created_at", { ascending: false });
-
-      if (errorOrdenes) {
-        throw new Error(
-          `Error cargando órdenes: ${errorOrdenes.message}`
-        );
-      }
-
-      setOrdenes((ordenesData as OrdenCompra[]) || []);
-
-      const { data: proveedoresData, error: errorProveedores } =
-        await supabase
+          .order("created_at", { ascending: false }),
+        supabase
           .from("proveedores")
           .select("*")
           .eq("taller_id", TALLER_ID)
           .eq("activo", true)
-          .order("nombre", { ascending: true });
-
-      if (errorProveedores) {
-        throw new Error(
-          `Error cargando proveedores: ${errorProveedores.message}`
-        );
-      }
-
-      setProveedores((proveedoresData as Proveedor[]) || []);
-
-      const { data: productosData, error: errorProductos } =
-        await supabase
+          .order("nombre", { ascending: true }),
+        supabase
           .from("productos")
-          .select(
-            "id, nombre, precio, costo, stock_actual"
-          )
+          .select("id,nombre,precio,costo,stock_actual")
           .eq("taller_id", TALLER_ID)
           .eq("activo", true)
-          .order("nombre", { ascending: true });
+          .order("nombre", { ascending: true }),
+        supabase
+          .from("ordenes_compra_detalles")
+          .select("id,orden_id,producto_id,cantidad,precio_unitario,subtotal,cantidad_recibida"),
+      ]);
 
-      if (errorProductos) {
-        throw new Error(
-          `Error cargando productos: ${errorProductos.message}`
-        );
-      }
+      const primero = ordenesRes.error || proveedoresRes.error || productosRes.error || detallesRes.error;
+      if (primero) throw new Error(primero.message);
 
-      setProductos((productosData as Producto[]) || []);
+      const proveedoresData = (proveedoresRes.data || []) as Proveedor[];
+      const productosData = (productosRes.data || []) as Producto[];
+      const detallesData = (detallesRes.data || []) as OrdenCompraDetalle[];
+      const proveedoresMap = new Map(proveedoresData.map(p => [Number(p.id), p]));
+      const productosMap = new Map(productosData.map(p => [Number(p.id), p]));
+
+      const ordenesData = (ordenesRes.data || []).map((orden: any) => ({
+        ...orden,
+        proveedor: proveedoresMap.get(Number(orden.proveedor_id)),
+        detalles: detallesData
+          .filter(d => Number(d.orden_id) === Number(orden.id))
+          .map(d => ({
+            ...d,
+            producto: productosMap.get(Number(d.producto_id)),
+          })),
+      })) as OrdenCompra[];
+
+      setOrdenes(ordenesData);
+      setProveedores(proveedoresData);
+      setProductos(productosData);
     } catch (err) {
       setError(
         err instanceof Error
