@@ -957,7 +957,9 @@ export default function ChecklistPage() {
    * ==========================================================
    */
 
-  const itemsChecklist = esApple ? ITEMS : ITEMS.filter((item) => item.id !== "face_id");\n\n  const guardarChecklist = async () => {
+  const itemsChecklist = esApple ? ITEMS : ITEMS.filter((item) => item.id !== "face_id");
+
+  const guardarChecklist = async () => {
     if (bloqueado) {
       setMensaje(
         "Este checklist ya está cerrado."
