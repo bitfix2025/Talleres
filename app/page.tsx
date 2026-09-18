@@ -158,21 +158,21 @@ export default function Home() {
                 icon={<Package size={18} />}
                 label="Inventario"
                 onClick={() => irA("/inventario")}
-                visible={rol==="administrador"}
+                visible={String(rol).toUpperCase()==="ADMIN"}
               />
 
               <SidebarItem
                 icon={<ShoppingCart size={18} />}
                 label="Compras"
                 onClick={() => irA("/compras")}
-                visible={rol==="administrador"}
+                visible={String(rol).toUpperCase()==="ADMIN"}
               />
 
               <SidebarItem
                 icon={<DollarSign size={18} />}
                 label="Ventas"
                 onClick={() => irA("/ventas")}
-                visible={rol==="administrador"}
+                visible={String(rol).toUpperCase()==="ADMIN"}
               />
 
               <SidebarItem
@@ -185,7 +185,7 @@ export default function Home() {
                 icon={<BarChart3 size={18} />}
                 label="Reportes"
                 onClick={() => irA("/reportes")}
-                visible={rol==="administrador"}
+                visible={String(rol).toUpperCase()==="ADMIN"}
               />
 
               <div className="my-6 border-t border-white/10" />
@@ -198,7 +198,7 @@ export default function Home() {
                 icon={<Settings size={18} />}
                 label="Configuración"
                 onClick={() => irA("/configuracion")}
-                visible={rol==="administrador"}
+                visible={String(rol).toUpperCase()==="ADMIN"}
               />
             </nav>
 
@@ -215,7 +215,7 @@ export default function Home() {
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-white">
-                    {rol==="administrador"?"Administrador":rol==="tecnico"?"Técnico":"Recepción"}
+                    {String(rol).toUpperCase()==="ADMIN"?"Administrador":String(rol).toUpperCase()==="TECNICO"?"Técnico":"Recepción"}
                   </p>
 
                   <p className="truncate text-xs text-white/40">
