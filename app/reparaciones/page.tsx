@@ -414,7 +414,7 @@ export default function ReparacionesPage() {
                   "/reparaciones/nueva"
                 )
               }
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#16a34a] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#15803d] active:scale-[0.98]"
             >
               <Plus size={18} />
               Nueva reparación
@@ -427,40 +427,11 @@ export default function ReparacionesPage() {
             MÉTRICAS
         ====================================== */}
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-
-          <MetricCard
-            titulo="Recibidos"
-            valor={recibidos}
-            descripcion="Esperando diagnóstico"
-            icon={<Clock3 size={20} />}
-            clase="blue"
-          />
-
-          <MetricCard
-            titulo="En reparación"
-            valor={enReparacion}
-            descripcion="Trabajos activos"
-            icon={<Wrench size={20} />}
-            clase="purple"
-          />
-
-          <MetricCard
-            titulo="Reparados"
-            valor={reparados}
-            descripcion="Listos para entregar"
-            icon={<CheckCircle2 size={20} />}
-            clase="green"
-          />
-
-          <MetricCard
-            titulo="Pendientes de entrega"
-            valor={pendientesEntrega}
-            descripcion="Esperando al cliente"
-            icon={<Smartphone size={20} />}
-            clase="orange"
-          />
-
+        <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard titulo="Recibidos" valor={recibidos} descripcion="Esperando diagnóstico" icon={<Clock3 size={19} />} clase="blue" />
+          <MetricCard titulo="En reparación" valor={enReparacion} descripcion="Trabajos activos" icon={<Wrench size={19} />} clase="purple" />
+          <MetricCard titulo="Listos para entregar" valor={reparados} descripcion="Reparaciones terminadas" icon={<CheckCircle2 size={19} />} clase="green" />
+          <MetricCard titulo="Total" valor={ordenes.length} descripcion="Órdenes registradas" icon={<Smartphone size={19} />} clase="orange" />
         </div>
 
         {/* =====================================
@@ -515,7 +486,7 @@ export default function ReparacionesPage() {
                   setBusqueda(e.target.value)
                 }
                 placeholder="Buscar cliente, IMEI, modelo, número de orden..."
-                className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm outline-none transition focus:border-black focus:bg-white focus:ring-2 focus:ring-black/5"
+                className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm outline-none transition focus:border-[#16a34a] focus:bg-white focus:ring-2 focus:ring-green-100"
               />
 
             </div>
@@ -525,7 +496,7 @@ export default function ReparacionesPage() {
               onChange={(e) =>
                 setEstadoFiltro(e.target.value)
               }
-              className="h-12 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none transition focus:border-black focus:bg-white"
+              className="h-12 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none transition focus:border-[#16a34a] focus:bg-white"
             >
               <option value="TODOS">
                 Todos los estados
@@ -546,7 +517,7 @@ export default function ReparacionesPage() {
               onChange={(e) =>
                 setModeloFiltro(e.target.value)
               }
-              className="h-12 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none transition focus:border-black focus:bg-white"
+              className="h-12 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm outline-none transition focus:border-[#16a34a] focus:bg-white"
             >
               <option value="TODOS">
                 Todos los modelos
@@ -602,7 +573,7 @@ export default function ReparacionesPage() {
             LISTADO
         ====================================== */}
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="mt-6 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
 
           <div className="flex flex-col gap-3 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between">
 
@@ -772,7 +743,7 @@ export default function ReparacionesPage() {
                           onClick={() =>
                             abrirOrden(orden.id)
                           }
-                          className="group cursor-pointer transition hover:bg-gray-50"
+                          className="group cursor-pointer transition hover:bg-[#f7faf8]"
                         >
 
                           {/* ORDEN */}
@@ -781,7 +752,7 @@ export default function ReparacionesPage() {
 
                             <div className="flex items-center gap-3">
 
-                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition group-hover:bg-black group-hover:text-white">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-700 transition group-hover:bg-[#16a34a] group-hover:text-white">
                                 <Wrench size={18} />
                               </div>
 
@@ -939,7 +910,7 @@ export default function ReparacionesPage() {
 
                           <td className="px-5 py-4 text-right">
 
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-300 transition group-hover:bg-gray-100 group-hover:text-gray-700">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-gray-300 transition group-hover:border-green-200 group-hover:bg-green-50 group-hover:text-green-700">
                               <ChevronRight size={18} />
                             </div>
 
