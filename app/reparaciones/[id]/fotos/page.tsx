@@ -1381,7 +1381,7 @@ export default function ChecklistPage() {
                                     } else {
                                       abrirSelectorFoto(tipo.id);
                                     }
-                                  }
+                                  }}
                                   disabled={
                                     bloqueado ||
                                     guardando
