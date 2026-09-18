@@ -82,3 +82,88 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.registrar_historial_reparacion(bigint,text,text,text,text) TO authenticated;
+
+
+-- Correcciones de producción: consumo idempotente de repuestos y pagos multi-taller.
+CREATE OR REPLACE FUNCTION public.confirmar_reparacion_repuestos(p_orden_id bigint)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_item record;
+  v_orden_taller_id bigint;
+  v_producto public.productos%ROWTYPE;
+  v_usado integer;
+  v_falta integer;
+BEGIN
+  SELECT taller_id INTO v_orden_taller_id
+  FROM public.ordenes_reparacion
+  WHERE id = p_orden_id
+  FOR UPDATE;
+
+  IF v_orden_taller_id IS NULL THEN
+    RAISE EXCEPTION 'La reparación no existe';
+  END IF;
+
+  FOR v_item IN
+    SELECT * FROM public.presupuesto_reparacion_items
+    WHERE orden_id = p_orden_id
+    ORDER BY id
+  LOOP
+    SELECT COALESCE(SUM(cantidad),0)::integer
+      INTO v_usado
+    FROM public.reparacion_repuestos
+    WHERE orden_id = p_orden_id
+      AND producto_id = v_item.producto_id;
+
+    v_falta := GREATEST(v_item.cantidad - v_usado, 0);
+    IF v_falta = 0 THEN
+      CONTINUE;
+    END IF;
+
+    SELECT * INTO v_producto
+    FROM public.productos
+    WHERE id = v_item.producto_id
+      AND taller_id = v_orden_taller_id
+      AND activo = true
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'El producto % no existe o no pertenece al taller', v_item.producto_id;
+    END IF;
+
+    IF v_producto.stock_actual < v_falta THEN
+      RAISE EXCEPTION 'Stock insuficiente para %. Disponible: %, solicitado: %', v_producto.nombre, v_producto.stock_actual, v_falta;
+    END IF;
+
+    UPDATE public.productos
+    SET stock_actual = stock_actual - v_falta
+    WHERE id = v_item.producto_id;
+
+    INSERT INTO public.reparacion_repuestos (
+      taller_id, orden_id, producto_id, cantidad, costo_unitario
+    ) VALUES (
+      v_orden_taller_id, p_orden_id, v_item.producto_id, v_falta,
+      COALESCE(v_item.costo_unitario, v_producto.costo, 0)
+    );
+
+    INSERT INTO public.movimientos_stock (
+      taller_id, producto_id, tipo, cantidad, motivo,
+      referencia_tipo, referencia_id, costo_unitario
+    ) VALUES (
+      v_orden_taller_id, v_item.producto_id, 'SALIDA', v_falta,
+      'Repuesto utilizado en reparación', 'REPARACION', p_orden_id,
+      COALESCE(v_item.costo_unitario, v_producto.costo, 0)
+    );
+  END LOOP;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.confirmar_reparacion_repuestos(bigint) TO anon;
+GRANT EXECUTE ON FUNCTION public.confirmar_reparacion_repuestos(bigint) TO authenticated;
+
+-- Compatibilidad: el frontend usa observaciones para las notas del pago.
+ALTER TABLE public.pagos_reparacion
+  ADD COLUMN IF NOT EXISTS observaciones text;
