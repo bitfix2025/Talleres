@@ -20,12 +20,27 @@ export default function EtiquetaTecnico() {
 
   useEffect(() => {
     const cargar = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("ordenes_reparacion")
-        .select("id,falla_reportada,contrasena_equipo,created_at,clientes(nombre),equipos(marca,modelo,imei)")
+        .select("id,falla_reportada,contrasena_equipo,created_at,cliente_id,equipo_id")
         .eq("id", ordenId)
         .maybeSingle();
-      if (data) setOrden(data as unknown as Orden);
+
+      if (error || !data) return;
+
+      const [{ data: cliente }, { data: equipo }] = await Promise.all([
+        supabase.from("clientes").select("nombre").eq("id", data.cliente_id).maybeSingle(),
+        supabase.from("equipos").select("marca,modelo,imei").eq("id", data.equipo_id).maybeSingle(),
+      ]);
+
+      setOrden({
+        id: data.id,
+        falla_reportada: data.falla_reportada,
+        contrasena_equipo: data.contrasena_equipo,
+        created_at: data.created_at,
+        cliente: cliente || null,
+        equipo: equipo || null,
+      });
     };
     cargar();
   }, [ordenId]);
