@@ -1296,82 +1296,29 @@ export default function ChecklistPage() {
                             </div>
 
                             {preview ? (
-                              <>
+                              <div>
                                 <div className="relative aspect-[4/3] bg-gray-100">
-
-                                  <img
-                                    src={
-                                      preview
-                                    }
-                                    alt={
-                                      tipo.nombre
-                                    }
-                                    className="h-full w-full object-cover"
-                                  />
-
+                                  <img src={preview} alt={tipo.nombre} className="h-full w-full object-cover" />
                                   {!bloqueado && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        eliminarFotoSeleccionada(
-                                          tipo.id
-                                        )
-                                      }
-                                      className="absolute right-3 top-3 rounded-full bg-black/75 px-3 py-2 text-xs font-bold text-white"
-                                    >
-                                      Eliminar
-                                    </button>
+                                    <button type="button" onClick={() => eliminarFotoSeleccionada(tipo.id)} className="absolute right-3 top-3 rounded-full bg-black/75 px-3 py-2 text-xs font-bold text-white">Eliminar</button>
                                   )}
-
                                 </div>
-
                                 {!bloqueado && (
                                   <div className="border-t border-gray-200 bg-white p-3">
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        abrirSelectorFoto(
-                                          tipo.id
-                                        )
-                                      }
-                                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-100"
-                                    >
-                                      Cambiar foto
-                                    </button>
-
+                                    <button type="button" onClick={() => abrirSelectorFoto(tipo.id)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-100">Cambiar foto</button>
                                   </div>
                                 )}
-                              </>
-                            ) : fotosExistentes.length >
-                              0 ? (
+                              </div>
+                            ) : fotosExistentes.length > 0 ? (
                               <div className="space-y-2 p-3">
-
-                                {fotosExistentes.map(
-                                  (
-                                    foto
-                                  ) => (
-                                    <div
-                                      key={
-                                        foto.id
-                                      }
-                                      className="overflow-hidden rounded-xl border border-gray-200 bg-white"
-                                    >
-                                      <img
-                                        src={
-                                          foto.url
-                                        }
-                                        alt={`Foto ${tipo.nombre}`}
-                                        className="aspect-[4/3] w-full object-cover"
-                                      />
-                                    </div>
-                                  )
-                                )}
-
+                                {fotosExistentes.map((foto) => (
+                                  <div key={foto.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                                    <img src={foto.url} alt={tipo.nombre} className="aspect-[4/3] w-full object-cover" />
+                                  </div>
+                                ))}
                               </div>
                             ) : (
                               <div className="p-4">
-
                                 <div className={`flex aspect-[4/3] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white transition ${guardando ? "cursor-not-allowed opacity-50" : "hover:border-gray-500 hover:bg-gray-50"}`}>
                                   <span className="text-4xl">📷</span>
                                   <span className="mt-3 text-sm font-bold text-gray-800">Agregar foto</span>
@@ -1381,36 +1328,19 @@ export default function ChecklistPage() {
                                     <button type="button" disabled={guardando} onClick={() => void abrirFotosCelular()} className="rounded-lg bg-green-700 px-3 py-2 text-xs font-bold text-white">📱 Desde celular / QR</button>
                                   </div>
                                 </div>
-
-                            <input
-                              ref={(element) => {
-                                inputRefs.current[
-                                  tipo.id
-                                ] = element;
-                              }}
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              className="hidden"
-                              disabled={
-                                bloqueado ||
-                                guardando
-                              }
-                              onChange={(e) => {
-                                const archivo =
-                                  e.target.files?.[0] ||
-                                  null;
-
-                                cambiarFoto(
-                                  tipo.id,
-                                  archivo
-                                );
-
-                                e.target.value =
-                                  "";
-                              }}
-                            />
-
+                                <input
+                                  ref={(element) => { inputRefs.current[tipo.id] = element; }}
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  className="hidden"
+                                  disabled={bloqueado || guardando}
+                                  onChange={(e) => {
+                                    const archivo = e.target.files?.[0] || null;
+                                    cambiarFoto(tipo.id, archivo);
+                                    e.target.value = "";
+                                  }}
+                                />
                               </div>
                             )}
 
