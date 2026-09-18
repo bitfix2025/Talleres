@@ -46,11 +46,12 @@ type Orden = {
 
 const ESTADOS = [
   "RECIBIDO",
-  "DIAGNOSTICO",
-  "PRESUPUESTO",
-  "ESPERANDO REPUESTO",
-  "EN REPARACION",
-  "REPARADO",
+  "DIAGNÓSTICO",
+  "PRESUPUESTADO",
+  "ESPERANDO APROBACIÓN",
+  "APROBADO",
+  "EN REPARACIÓN",
+  "LISTO PARA ENTREGAR",
   "ENTREGADO",
   "CANCELADO",
 ];
@@ -253,20 +254,10 @@ export default function ReparacionesPage() {
       "en reparacion"
   ).length;
 
-  const reparados = ordenes.filter(
-    (orden) =>
-      normalizar(orden.estado || "") ===
-      "reparado"
-  ).length;
-
-  const pendientesEntrega =
-    ordenes.filter((orden) => {
-      const estado = normalizar(
-        orden.estado || ""
-      );
-
-      return estado === "reparado";
-    }).length;
+  const reparados = ordenes.filter((orden) => {
+    const estado = normalizar(orden.estado || "");
+    return estado === "listo para entregar" || estado === "reparado";
+  }).length;
 
   /* =========================================
      FECHA
@@ -317,15 +308,19 @@ export default function ReparacionesPage() {
       case "diagnostico":
         return "bg-purple-50 text-purple-700 border-purple-200";
 
-      case "presupuesto":
+      case "presupuestado":
         return "bg-yellow-50 text-yellow-700 border-yellow-200";
 
-      case "esperando repuesto":
+      case "esperando aprobacion":
         return "bg-orange-50 text-orange-700 border-orange-200";
+
+      case "aprobado":
+        return "bg-green-50 text-green-700 border-green-200";
 
       case "en reparacion":
         return "bg-indigo-50 text-indigo-700 border-indigo-200";
 
+      case "listo para entregar":
       case "reparado":
         return "bg-green-50 text-green-700 border-green-200";
 
