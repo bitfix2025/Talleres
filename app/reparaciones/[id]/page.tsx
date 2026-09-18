@@ -61,7 +61,9 @@ export default function ReparacionDetallePage(){
      setDiagnostico(textoDiagnostico);
      setNotas(textoNotas);
      setManoObra(data.presupuesto_mano_obra!=null?String(data.presupuesto_mano_obra):""); setContrasenaEquipo(data.contrasena_equipo||"");
-    const {data:td}=await supabase.from("perfiles").select("id,nombre,email,rol,activo").eq("activo",true).in("rol",["TECNICO","tecnico"]); setTecnicos((td||[]) as Tecnico[]);
+    const {data:td,error:te}=await supabase.from("perfiles").select("id,nombre,email,rol,activo").eq("activo",true).in("rol",["TECNICO","tecnico"]);
+     if(te) setError(`No se pudieron cargar los técnicos: ${te.message}`);
+     setTecnicos((td||[]) as Tecnico[]);
     setTecnicoId((data as any).tecnico_id||"");
     const {data:fd}=await supabase.from("fotos_recepcion").select("id,tipo,url").eq("orden_id",ordenId).order("id");setFotos((fd||[]) as Foto[]);
     const {data:pd,error:pe}=await supabase.from("productos").select("id,nombre,categoria,marca,modelo,sku,costo,precio,stock_actual,activo").eq("taller_id",data.taller_id||1).eq("activo",true).order("nombre");
@@ -138,6 +140,7 @@ export default function ReparacionDetallePage(){
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <select value={tecnicoId} onChange={e=>setTecnicoId(e.target.value)} className="h-11 flex-1 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold outline-none focus:border-[#16a34a]">
             <option value="">Sin técnico asignado</option>
+             {tecnicos.length===0&&<option value="" disabled>No hay técnicos cargados</option>}
             {tecnicos.map(t=><option key={t.id} value={t.id}>{t.nombre||t.email||"Técnico"}{t.email&&t.nombre ? " · "+t.email : ""}</option>)}
           </select>
           <button disabled={guardando} onClick={async()=>{if(!orden)return;setGuardando(true);setError("");const{error:e}=await supabase.from("ordenes_reparacion").update({tecnico_id:tecnicoId||null}).eq("id",orden.id);if(e)setError(e.message);else{setMensaje(tecnicoId?"Técnico asignado correctamente.":"Técnico desasignado.");await supabase.rpc("registrar_historial_reparacion",{p_orden_id:orden.id,p_tipo:"TECNICO",p_estado_anterior:orden.estado,p_estado_nuevo:orden.estado,p_descripcion:tecnicoId?"Técnico asignado: "+(tecnicos.find(t=>t.id===tecnicoId)?.nombre||tecnicoId):"Técnico desasignado."});}setGuardando(false);}} className="h-11 rounded-xl bg-[#16a34a] px-5 text-sm font-bold text-white hover:bg-[#15803d]">Guardar técnico</button>
