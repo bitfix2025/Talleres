@@ -40,6 +40,8 @@ export default function Home() {
   const [busqueda, setBusqueda] = useState("");
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
   const [rol, setRol] = useState<RolUsuario>("ADMIN");
+  const [saludo, setSaludo] = useState("Buenos días");
+  useEffect(() => { const actualizarSaludo = () => { const h = new Date().getHours(); setSaludo(h >= 5 && h < 12 ? "Buenos días" : h >= 12 && h < 19 ? "Buenas tardes" : "Buenas noches"); }; actualizarSaludo(); const id = window.setInterval(actualizarSaludo, 60000); return () => window.clearInterval(id); }, []);
   useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser(); if(!user)return; const {data}=await supabase.from("perfiles").select("rol").eq("id",user.id).maybeSingle(); if(data?.rol)setRol(data.rol as RolUsuario)})()},[]);
 
   const rolNormalizado=String(rol||"").toUpperCase(); const permitido=(ruta:string)=>rolNormalizado==="ADMIN"||ruta==="/"||(rolNormalizado==="TECNICO"?["/reparaciones","/clientes","/equipos"]:["/reparaciones","/clientes","/equipos","/presupuestos","/inventario","/compras","/ventas"]).some(r=>ruta===r);
@@ -372,7 +374,7 @@ export default function Home() {
                 </p>
 
                 <h1 className="text-3xl font-bold tracking-tight text-gray-950 md:text-4xl">
-                  Buenos días
+                  {saludo}
                 </h1>
 
                 <p className="mt-2 text-sm text-gray-500">
