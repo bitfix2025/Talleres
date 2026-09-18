@@ -22,6 +22,8 @@ export default function NuevaReparacionPage() {
   const [clienteNombre, setClienteNombre] = useState("");
   const [clienteDni, setClienteDni] = useState("");
   const [clienteTelefono, setClienteTelefono] = useState("");
+  const [tipoEquipo, setTipoEquipo] = useState<"APPLE"|"OTRA">("APPLE");
+  const [marcaOtra, setMarcaOtra] = useState("");
   const [modelo, setModelo] = useState("");
   const [imei, setImei] = useState("");
   const [numeroSerie, setNumeroSerie] = useState("");
@@ -99,6 +101,8 @@ export default function NuevaReparacionPage() {
 
   const seleccionarEquipo = (equipo: Equipo) => {
     setEquipoSeleccionado(equipo);
+    setTipoEquipo((equipo.marca || "").toLowerCase() === "apple" ? "APPLE" : "OTRA");
+    setMarcaOtra((equipo.marca || "").toLowerCase() === "apple" ? "" : (equipo.marca || ""));
     setModelo(equipo.modelo || "");
     setImei(equipo.imei || "");
     setNumeroSerie(equipo.numero_serie || "");
@@ -115,7 +119,8 @@ export default function NuevaReparacionPage() {
       return;
     }
     if (!clienteNombre.trim()) { setError("Ingresá el nombre del cliente."); return; }
-    if (!modelo.trim()) { setError("Ingresá el modelo del iPhone."); return; }
+    if (!modelo.trim()) { setError("Ingresá el modelo del equipo."); return; }
+    if (tipoEquipo === "OTRA" && !marcaOtra.trim()) { setError("Ingresá la marca del equipo."); return; }
     if (!fallaReportada.trim()) { setError("Indicá el problema reportado."); return; }
 
     try {
@@ -161,7 +166,7 @@ export default function NuevaReparacionPage() {
         if (!equipo) {
           const bateriaNumero = bateria.trim() ? Number(bateria) : null;
           const creado = await supabase.from("equipos").insert({
-            taller_id: tallerId, cliente_id: cliente.id, tipo: "CELULAR", marca: "Apple",
+            taller_id: tallerId, cliente_id: cliente.id, tipo: "CELULAR", marca: tipoEquipo === "APPLE" ? "Apple" : marcaOtra.trim(),
             modelo: modelo.trim(), imei: imei.trim() || null, numero_serie: numeroSerie.trim() || null,
             color: color.trim() || null, capacidad: capacidad || null, bateria_porcentaje: bateriaNumero,
             observaciones: observaciones.trim() || null,
@@ -232,7 +237,7 @@ export default function NuevaReparacionPage() {
               ) : (
                 <div className="mt-4">
                   {equipoSeleccionado && !modoNuevoEquipo && <div className="mb-4 flex items-center justify-between rounded-2xl border border-green-200 bg-green-50 p-4"><div><p className="font-bold">{equipoSeleccionado.marca} {equipoSeleccionado.modelo}</p><p className="mt-1 text-xs text-gray-500">Equipo existente · su historial quedará asociado</p></div><button onClick={() => setEquipoSeleccionado(null)} className="text-xs font-bold text-gray-500">Cambiar</button></div>}
-                  {(modoNuevoEquipo || !equipoSeleccionado) && <div className="grid gap-3 md:grid-cols-2">
+                  {(modoNuevoEquipo || !equipoSeleccionado) && <div><div className="mb-4 grid gap-3 md:grid-cols-2"><div><label className="mb-2 block text-xs font-bold uppercase text-gray-500">Tipo de equipo</label><div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>setTipoEquipo("APPLE")} className={`rounded-xl border px-4 py-3 text-sm font-bold ${tipoEquipo==="APPLE"?"border-green-500 bg-green-50 text-green-700":"border-gray-200 bg-white"}`}>Apple</button><button type="button" onClick={()=>setTipoEquipo("OTRA")} className={`rounded-xl border px-4 py-3 text-sm font-bold ${tipoEquipo==="OTRA"?"border-green-500 bg-green-50 text-green-700":"border-gray-200 bg-white"}`}>Otra marca</button></div></div>{tipoEquipo==="OTRA"&&<input value={marcaOtra} onChange={e=>setMarcaOtra(e.target.value)} placeholder="Marca · Samsung, Xiaomi, Motorola..." className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/></div><div className="grid gap-3 md:grid-cols-2">
                     <input value={modelo} onChange={e=>setModelo(e.target.value)} placeholder="Modelo * · Ej: iPhone 15 Pro Max" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/>
                     <input value={imei} onChange={e=>setImei(e.target.value)} placeholder="IMEI" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/>
                     <input value={numeroSerie} onChange={e=>setNumeroSerie(e.target.value)} placeholder="Número de serie" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/>
