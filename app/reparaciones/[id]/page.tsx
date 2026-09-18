@@ -54,12 +54,12 @@ export default function ReparacionDetallePage(){
     const cliente=Array.isArray(data.clientes)?data.clientes[0]||null:data.clientes||null; const equipo=Array.isArray(data.equipos)?data.equipos[0]||null:data.equipos||null;
     setOrden({...data,cliente,equipo} as Orden);
      const obs=data.observaciones||"";
-     const dm=obs.match(/Diagnóstico:\s*([\s\S]*?)(?:\
-\
-Notas técnicas:|$)/i);
-     const nm=obs.match(/Notas técnicas:\s*([\s\S]*)$/i);
-     const nm=obs.match(/Notas técnicas:\s*([\s\S]*)$/i);
-     setDiagnostico(dm?.[1]?.trim()||""); setNotas(nm?.[1]?.trim()||(dm?"":obs));
+     const marcador="Notas técnicas:";
+     const posNotas=obs.indexOf(marcador);
+     const textoDiagnostico=obs.startsWith("Diagnóstico:") ? obs.slice("Diagnóstico:".length, posNotas>=0 ? posNotas : obs.length).trim() : "";
+     const textoNotas=posNotas>=0 ? obs.slice(posNotas+marcador.length).trim() : (textoDiagnostico ? "" : obs);
+     setDiagnostico(textoDiagnostico);
+     setNotas(textoNotas);
      setManoObra(data.presupuesto_mano_obra!=null?String(data.presupuesto_mano_obra):""); setContrasenaEquipo(data.contrasena_equipo||"");
     const {data:td}=await supabase.from("perfiles").select("id,nombre,email,rol,activo").eq("activo",true).in("rol",["TECNICO","tecnico"]); setTecnicos((td||[]) as Tecnico[]);
     setTecnicoId((data as any).tecnico_id||"");
