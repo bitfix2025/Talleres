@@ -1209,7 +1209,7 @@ export default function ChecklistPage() {
                         </p>
                       </div>
 
-                      {!bloqueado && (
+                      {(
                         <span className="text-xs font-semibold text-gray-400">
                           Máximo 10 MB por foto
                         </span>
