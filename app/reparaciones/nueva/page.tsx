@@ -16,6 +16,8 @@ export default function NuevaReparacionPage() {
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<Equipo | null>(null);
   const [buscarCliente, setBuscarCliente] = useState("");
   const [mostrarClientes, setMostrarClientes] = useState(false);
+  const [buscandoDni, setBuscandoDni] = useState(false);
+  const [mensajeDni, setMensajeDni] = useState("");
   const [modoNuevoCliente, setModoNuevoCliente] = useState(false);
   const [modoNuevoEquipo, setModoNuevoEquipo] = useState(false);
 
@@ -61,6 +63,36 @@ export default function NuevaReparacionPage() {
     if (!q) return clientes.slice(0, 8);
     return clientes.filter(c => `${c.nombre} ${c.dni || ""} ${c.telefono || ""}`.toLowerCase().includes(q)).slice(0, 8);
   }, [clientes, buscarCliente]);
+
+  const buscarClientePorDni = async () => {
+    const dni = clienteDni.trim().replace(/[^0-9A-Za-z-]/g, "");
+    if (!dni) return;
+    setBuscandoDni(true);
+    setMensajeDni("");
+    setError("");
+    try {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("id,nombre,dni,telefono")
+        .eq("dni", dni)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) {
+        setMensajeDni("No encontramos un cliente con ese DNI. Podés completar sus datos y registrarlo.");
+        setModoNuevoCliente(true);
+        setClienteSeleccionado(null);
+        setEquipos([]);
+        return;
+      }
+      seleccionarCliente(data as Cliente);
+      setMensajeDni("Cliente encontrado. Sus equipos anteriores aparecen abajo.");
+    } catch (e:any) {
+      setError(`No se pudo buscar el DNI: ${e?.message || "error desconocido"}`);
+    } finally {
+      setBuscandoDni(false);
+    }
+  };
 
   const seleccionarCliente = (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
@@ -226,9 +258,12 @@ export default function NuevaReparacionPage() {
                   {modoNuevoCliente ? (
                     <div className="grid gap-3 md:grid-cols-3">
                       <input value={clienteNombre} onChange={e=>setClienteNombre(e.target.value)} placeholder="Nombre y apellido *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/>
-                      <input value={clienteDni} onChange={e=>setClienteDni(e.target.value)} placeholder="DNI" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/>
+                      <div className="relative">
+                        <input value={clienteDni} onChange={e=>{setClienteDni(e.target.value);setMensajeDni("")}} onBlur={buscarClientePorDni} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();buscarClientePorDni()}}} placeholder="DNI · buscar automáticamente" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/>
+                        {buscandoDni && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Buscando...</span>}
+                      </div>
                       <input value={clienteTelefono} onChange={e=>setClienteTelefono(e.target.value)} placeholder="Teléfono" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/>
-                      <p className="md:col-span-3 text-xs text-gray-500">Completá los datos del cliente. Se guardarán al crear la reparación.</p>
+                      <p className="md:col-span-3 text-xs text-gray-500">Ingresá el DNI y Talleres buscará automáticamente al cliente. Si existe, cargará sus datos y mostrará sus equipos anteriores.</p>{mensajeDni && <p className={`md:col-span-3 text-xs font-semibold ${mensajeDni.startsWith("Cliente encontrado") ? "text-green-700" : "text-amber-700"}`}>{mensajeDni}</p>}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
