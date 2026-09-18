@@ -1372,48 +1372,15 @@ export default function ChecklistPage() {
                             ) : (
                               <div className="p-4">
 
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const usarCelular = window.confirm("¿Querés tomar la foto con el celular?\n\nAceptar = mostrar QR para el celular\nCancelar = usar la cámara/archivo de esta PC");
-                                    if (usarCelular) {
-                                      void abrirFotosCelular();
-                                    } else {
-                                      abrirSelectorFoto(tipo.id);
-                                    }
-                                  }}
-                                  disabled={
-                                    bloqueado ||
-                                    guardando
-                                  }
-                                  className={`flex aspect-[4/3] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white transition ${
-                                    bloqueado ||
-                                    guardando
-                                      ? "cursor-not-allowed opacity-50"
-                                      : "cursor-pointer hover:border-gray-500 hover:bg-gray-50"
-                                  }`}
-                                >
-
-                                  <span className="text-4xl">
-                                    📷
-                                  </span>
-
-                                  <span className="mt-3 text-sm font-bold text-gray-800">
-                                    Agregar foto
-                                  </span>
-
+                                <div className={`flex aspect-[4/3] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white transition ${guardando ? "cursor-not-allowed opacity-50" : "hover:border-gray-500 hover:bg-gray-50"}`}>
+                                  <span className="text-4xl">📷</span>
+                                  <span className="mt-3 text-sm font-bold text-gray-800">Agregar foto</span>
                                   <span className="mt-1 text-xs text-gray-400">Elegí cómo cargar la foto</span>
                                   <div className="mt-4 flex flex-wrap justify-center gap-2">
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); abrirSelectorFoto(tipo.id); }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-700">🖥️ Desde PC</button>
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); void abrirFotosCelular(); }} className="rounded-lg bg-green-700 px-3 py-2 text-xs font-bold text-white">📱 Desde celular / QR</button>
+                                    <button type="button" disabled={guardando} onClick={() => abrirSelectorFoto(tipo.id)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-700">🖥️ Desde PC</button>
+                                    <button type="button" disabled={guardando} onClick={() => void abrirFotosCelular()} className="rounded-lg bg-green-700 px-3 py-2 text-xs font-bold text-white">📱 Desde celular / QR</button>
                                   </div>
-
-                                </button>
-
-                              </div>
-                            )}
-
-                            {/* INPUT REAL */}
+                                </div>
 
                             <input
                               ref={(element) => {
