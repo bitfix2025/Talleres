@@ -14,7 +14,7 @@ type Cliente = { nombre: string | null; dni: string | null; telefono: string | n
 type Equipo = { marca:string|null; modelo:string|null; imei:string|null; numero_serie:string|null; color:string|null; capacidad:string|null; bateria_porcentaje:number|null };
 type Orden = { contrasena_equipo?: string | null; id:number; tecnico_id?:string|null; taller_id:number|null; cliente_id:number|null; equipo_id:number|null; estado:string|null; falla_reportada:string|null; observaciones:string|null; created_at:string|null; presupuesto_mano_obra:number|null; cliente:Cliente|null; equipo:Equipo|null };
 type Foto = { id:number; tipo:string; url:string };
-type Tecnico = { id:string; nombre:string|null; email:string|null; rol:string|null; activo:boolean };
+type Tecnico = { id:string; nombre:string|null; rol:string|null; activo:boolean };
 type Producto = { id:number; nombre:string; categoria:string|null; marca:string|null; modelo:string|null; sku:string|null; costo:number|null; precio:number|null; stock_actual:number; activo:boolean };
 type Item = { id:number; producto_id:number; cantidad:number; precio_unitario:number; costo_unitario:number; producto:Producto|null };
 type Pago = { id:number; monto:number; monto_usd?:number; metodo_pago:string; concepto?:string|null; observaciones:string|null; fecha_pago?:string; created_at:string };
@@ -104,7 +104,33 @@ export default function ReparacionDetallePage(){
      setGuardando(false);
    };
 
-  const agregarRepuesto=async()=>{if(!orden)return;setError("");setMensaje("");const p=productos.find(x=>x.id===Number(productoId));const q=Number(cantidad);const precio=Number(precioVenta);if(!p)return setError("Seleccioná un repuesto del inventario.");if(!Number.isInteger(q)||q<=0)return setError("La cantidad debe ser mayor a 0.");if(!Number.isFinite(precio)||precio<0)return setError("Ingresá un precio válido.");const existente=items.find(x=>x.producto_id===p.id);const nueva=(existente?.cantidad||0)+q;if(nueva>p.stock_actual)return setError(`Stock insuficiente. ${p.nombre}: ${p.stock_actual} disponible(s).`);setGuardando(true);let e;if(existente){e=(await supabase.from("presupuesto_reparacion_items").update({cantidad:nueva,precio_unitario:precio}).eq("id",existente.id)).error;}else{e=(await supabase.from("presupuesto_reparacion_items").insert({taller_id:orden.taller_id,orden_id:ordenId,producto_id:p.id,cantidad:q,costo_unitario:Number(p.costo||0),precio_unitario:precio})).error;}if(e)setError(`No se pudo guardar el repuesto: ${e.message}`);else{setMensaje(`${p.nombre} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");await cargar();}setGuardando(false);};
+  const agregarRepuesto=async()=>{if(!orden||guardando)return;setError("");setMensaje("");
+    const p=productos.find(x=>x.id===Number(productoId)); const q=Number(cantidad); const precio=Number(precioVenta);
+    if(!p)return setError("Seleccioná un repuesto del inventario.");
+    if(!Number.isInteger(q)||q<=0)return setError("La cantidad debe ser un número entero mayor a 0.");
+    if(!Number.isFinite(precio)||precio<0)return setError("Ingresá un precio de venta válido.");
+    const existente=items.find(x=>x.producto_id===p.id); const nueva=(existente?.cantidad||0)+q;
+    if(nueva>p.stock_actual)return setError(`Stock insuficiente. ${p.nombre}: ${p.stock_actual} disponible(s).`);
+    setGuardando(true);
+    try{
+      const productoBD=await supabase.from("productos").select("id,nombre,costo,precio").eq("id",p.id).maybeSingle();
+      if(productoBD.error)throw new Error(productoBD.error.message);
+      if(!productoBD.data)throw new Error("No se encontró el repuesto seleccionado.");
+      const nombreProducto=String(productoBD.data.nombre||p.nombre||"").trim();
+      const costoProducto=Number(productoBD.data.costo??p.costo??0);
+      if(!nombreProducto)throw new Error("El repuesto no tiene nombre en el inventario.");
+      if(!Number.isFinite(costoProducto))throw new Error("El costo del repuesto no es válido.");
+      if(existente){
+        const r=await supabase.from("presupuesto_reparacion_items").update({cantidad:nueva,precio_unitario:precio,nombre_producto:nombreProducto}).eq("id",existente.id).select("id,orden_id,producto_id,nombre_producto,cantidad,precio_unitario,costo_unitario").single();
+        if(r.error)throw new Error(r.error.message);
+      }else{
+        const r=await supabase.from("presupuesto_reparacion_items").insert({taller_id:orden.taller_id||1,orden_id:orden.id,producto_id:p.id,nombre_producto:nombreProducto,cantidad:q,costo_unitario:costoProducto,precio_unitario:precio}).select("id,orden_id,producto_id,nombre_producto,cantidad,precio_unitario,costo_unitario").single();
+        if(r.error)throw new Error(r.error.message);
+      }
+      setMensaje(`${nombreProducto} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");await cargar();
+    }catch(e){setError(`No se pudo guardar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
+    finally{setGuardando(false);}
+  };
   const eliminarRepuesto=async(id:number)=>{setGuardando(true);setError("");const{error:e}=await supabase.from("presupuesto_reparacion_items").delete().eq("id",id);if(e)setError(e.message);else setMensaje("Repuesto eliminado.");await cargar();setGuardando(false);};
   const guardarPresupuesto=async(enviar:boolean)=>{if(!orden)return;const mano=Math.max(0,Number(manoObra)||0);if(items.length===0&&mano<=0)return setError("Agregá al menos un repuesto o una mano de obra.");setGuardando(true);setError("");const{error:e}=await supabase.from("ordenes_reparacion").update({presupuesto_mano_obra:mano,estado:enviar?"ESPERANDO APROBACIÓN":"PRESUPUESTADO"}).eq("id",orden.id);if(e)setError(`No se pudo guardar el presupuesto: ${e.message}`);else{setOrden({...orden,presupuesto_mano_obra:mano,estado:enviar?"ESPERANDO APROBACIÓN":"PRESUPUESTADO"});setMensaje(enviar?"Presupuesto enviado a aprobación.":"Presupuesto guardado correctamente.");}setGuardando(false);};
 
@@ -117,7 +143,13 @@ export default function ReparacionDetallePage(){
   const totalRepuestos=items.reduce((s,i)=>s+Number(i.cantidad||0)*Number(i.precio_unitario||0),0),total=totalRepuestos+(Number(manoObra)||0);
   const totalPagado=pagos.reduce((s,p)=>s+Number(p.monto||0),0),saldo=Math.max(0,total-totalPagado);
   const estadoPago=saldo<=0&&total>0?"PAGADO":totalPagado>0?"PAGO PARCIAL":"PENDIENTE";
-  const registrarPago=async()=>{if(!orden)return;const monto=Number(montoPago);if(!Number.isFinite(monto)||monto<=0)return setError("Ingresá un monto de pago válido.");if(monto>saldo+0.01)return setError(`El pago supera el saldo pendiente de ${dinero(saldo)}.`);setGuardando(true);setError("");const{error:e}=await supabase.from("pagos_reparacion").insert({taller_id:orden.taller_id ?? null,orden_id:orden.id,monto,monto_usd:monto,metodo_pago:metodoPago,concepto:"Pago de reparación",observaciones:notasPago.trim()||null,fecha_pago:new Date().toISOString()});if(e)setError(`No se pudo registrar el pago: ${e.message}`);else{setMontoPago("");setNotasPago("");setMensaje(`Pago registrado: ${dinero(monto)}.`);await cargar();}setGuardando(false);};
+  const registrarPago=async()=>{if(!orden||guardando)return;const monto=Number(montoPago);if(!Number.isFinite(monto)||monto<=0)return setError("Ingresá un monto de pago válido.");if(monto>saldo+0.01)return setError(`El pago supera el saldo pendiente de ${dinero(saldo)}.`);setGuardando(true);setError("");setMensaje("");
+    try{
+      const r=await supabase.from("pagos_reparacion").insert({taller_id:orden.taller_id??null,orden_id:orden.id,monto,monto_usd:monto,metodo_pago:metodoPago,concepto:"Pago de reparación",observaciones:notasPago.trim()||null,fecha_pago:new Date().toISOString()}).select("id,monto,monto_usd,metodo_pago,concepto,observaciones,fecha_pago,created_at").single();
+      if(r.error)throw new Error(r.error.message);
+      setMontoPago("");setNotasPago("");setMensaje(`Pago registrado: ${dinero(monto)}.`);await cargar();
+    }catch(e){setError(`No se pudo registrar el pago: ${e instanceof Error?e.message:String(e)}`);}finally{setGuardando(false);}
+  };
   if(cargando) return <main className="min-h-screen bg-[#f5f6f8] flex items-center justify-center"><Loader2 size={32} className="animate-spin"/></main>;
   if(!orden) return <main className="min-h-screen bg-[#f5f6f8] p-8"><button onClick={()=>router.push("/reparaciones")} className="inline-flex items-center gap-2"><ArrowLeft size={17}/> Volver</button><div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">{error||"No se pudo cargar la reparación."}</div></main>;
 
