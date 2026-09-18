@@ -28,17 +28,21 @@ import {
   SlidersHorizontal,
   ShoppingCart,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import type { RolUsuario } from "../lib/roles";
 
 export default function Home() {
   const router = useRouter();
 
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  const [notificacionesAbiertas, setNotificacionesAbiertas] =
-    useState(false);
+  const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
+  const [rol, setRol] = useState<RolUsuario>("administrador");
+  useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser(); if(!user)return; const {data}=await supabase.from("perfiles").select("rol").eq("id",user.id).maybeSingle(); if(data?.rol)setRol(data.rol as RolUsuario)})()},[]);
 
-  const irA = (ruta: string) => {
+  const permitido=(ruta:string)=>rol==="administrador"||ruta==="/"||(rol==="tecnico"?["/reparaciones","/clientes","/equipos"]:["/reparaciones","/clientes","/equipos","/presupuestos"]).some(r=>ruta===r);
+  const irA = (ruta: string) => { if(!permitido(ruta)) return;
     setMenuAbierto(false);
     router.push(ruta);
   };
@@ -154,18 +158,21 @@ export default function Home() {
                 icon={<Package size={18} />}
                 label="Inventario"
                 onClick={() => irA("/inventario")}
+                visible={rol==="administrador"}
               />
 
               <SidebarItem
                 icon={<ShoppingCart size={18} />}
                 label="Compras"
                 onClick={() => irA("/compras")}
+                visible={rol==="administrador"}
               />
 
               <SidebarItem
                 icon={<DollarSign size={18} />}
                 label="Ventas"
                 onClick={() => irA("/ventas")}
+                visible={rol==="administrador"}
               />
 
               <SidebarItem
@@ -178,6 +185,7 @@ export default function Home() {
                 icon={<BarChart3 size={18} />}
                 label="Reportes"
                 onClick={() => irA("/reportes")}
+                visible={rol==="administrador"}
               />
 
               <div className="my-6 border-t border-white/10" />
@@ -190,6 +198,7 @@ export default function Home() {
                 icon={<Settings size={18} />}
                 label="Configuración"
                 onClick={() => irA("/configuracion")}
+                visible={rol==="administrador"}
               />
             </nav>
 
@@ -206,11 +215,11 @@ export default function Home() {
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-white">
-                    Técnico
+                    {rol==="administrador"?"Administrador":rol==="tecnico"?"Técnico":"Recepción"}
                   </p>
 
                   <p className="truncate text-xs text-white/40">
-                    Administrador
+                    {rol}
                   </p>
                 </div>
 
@@ -728,6 +737,7 @@ function SidebarItem({
   label,
   activo = false,
   onClick,
+  visible = true,
 }: {
   icon: React.ReactNode;
   label: string;
