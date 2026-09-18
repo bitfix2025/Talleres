@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft, ArrowRight, Check, ClipboardCheck, FileText, Home, Printer,
+  ArrowLeft, ArrowRight, Check, ClipboardCheck, FileText, Home, Printer, CreditCard,
   ImageIcon, Loader2, Package, Plus, Save, Smartphone, Trash2, User, Wrench,
   ChevronUp, ChevronDown
 } from "lucide-react";
@@ -15,7 +15,7 @@ type Orden = { contrasena_equipo?: string | null; id:number; tecnico_id?:string|
 type Foto = { id:number; tipo:string; url:string };
 type Tecnico = { id:string; nombre:string|null; email:string|null; rol:string|null; activo:boolean };
 type Producto = { id:number; nombre:string; categoria:string|null; marca:string|null; modelo:string|null; sku:string|null; costo:number|null; precio:number|null; stock_actual:number; activo:boolean };
-type Item = { id:number; producto_id:number; cantidad:number; precio_unitario:number; costo_unitario:number; producto:Producto|null };
+type Item = { id:number; producto_id:number; cantidad:number; precio_unitario:number; costo_unitario:number; producto:Producto|null };\ntype Pago = { id:number; monto:number; metodo_pago:string; notas:string|null; created_at:string };
 type Paso = { db:string; key:string; label:string };
 
 const FLUJO:Paso[] = [
@@ -56,7 +56,7 @@ export default function ReparacionDetallePage(){
     const {data:fd}=await supabase.from("fotos_recepcion").select("id,tipo,url").eq("orden_id",ordenId).order("id");setFotos((fd||[]) as Foto[]);
     const {data:pd,error:pe}=await supabase.from("productos").select("id,nombre,categoria,marca,modelo,sku,costo,precio,stock_actual,activo").eq("taller_id",data.taller_id||1).eq("activo",true).order("nombre");
     if(!pe)setProductos((pd||[]) as Producto[]);
-    const {data:id,error:ie}=await supabase.from("presupuesto_reparacion_items").select("id,producto_id,cantidad,precio_unitario,costo_unitario").eq("orden_id",ordenId).order("id");
+    const {data:pg,error:pge}=await supabase.from("pagos_reparacion").select("id,monto,metodo_pago,notas,created_at").eq("orden_id",ordenId).order("created_at",{ascending:false});\n    if(!pge)setPagos((pg||[]) as Pago[]);\n    const {data:id,error:ie}=await supabase.from("presupuesto_reparacion_items").select("id,producto_id,cantidad,precio_unitario,costo_unitario").eq("orden_id",ordenId).order("id");
     if(!ie){const lista=(id||[]) as Omit<Item,"producto">[];setItems(lista.map(x=>({...x,producto:(pd||[]).find((p:any)=>p.id===x.producto_id)||null})));}else if(!ie.message.includes("does not exist")){setError(`No se pudieron cargar los repuestos: ${ie.message}`);}
     setCargando(false);
   };
@@ -79,7 +79,7 @@ export default function ReparacionDetallePage(){
 
   const consumirRepuestosYComenzar=async()=>{if(!orden||guardando)return;setGuardando(true);setError("");setMensaje("");try{const{data:usados,error:ue}=await supabase.from("reparacion_repuestos").select("producto_id,cantidad").eq("orden_id",orden.id);if(ue)throw new Error(ue.message);const usadosMap=new Map<number,number>();for(const u of usados||[]){usadosMap.set(Number(u.producto_id),(usadosMap.get(Number(u.producto_id))||0)+Number(u.cantidad||0));}for(const item of items){const ya=usadosMap.get(item.producto_id)||0;const falta=Number(item.cantidad||0)-ya;if(falta<=0)continue;const{error:e}=await supabase.rpc("usar_repuesto_reparacion",{p_orden_id:orden.id,p_producto_id:item.producto_id,p_cantidad:falta});if(e)throw new Error(e.message);}const{error:se}=await supabase.from("ordenes_reparacion").update({estado:"EN REPARACIÓN"}).eq("id",orden.id);if(se)throw new Error(se.message);setOrden({...orden,estado:"EN REPARACIÓN"});setMensaje("Repuestos registrados y descontados del inventario. La reparación comenzó.");await cargar();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setGuardando(false);}};
 
-  const totalRepuestos=items.reduce((s,i)=>s+Number(i.cantidad||0)*Number(i.precio_unitario||0),0),total=totalRepuestos+(Number(manoObra)||0);
+  const totalRepuestos=items.reduce((s,i)=>s+Number(i.cantidad||0)*Number(i.precio_unitario||0),0),total=totalRepuestos+(Number(manoObra)||0);\n  const totalPagado=pagos.reduce((s,p)=>s+Number(p.monto||0),0),saldo=Math.max(0,total-totalPagado);\n  const estadoPago=saldo<=0&&total>0?"PAGADO":totalPagado>0?"PAGO PARCIAL":"PENDIENTE";\n  const registrarPago=async()=>{if(!orden)return;const monto=Number(montoPago);if(!Number.isFinite(monto)||monto<=0)return setError("Ingresá un monto de pago válido.");if(monto>saldo+0.01)return setError(`El pago supera el saldo pendiente de ${dinero(saldo)}.`);setGuardando(true);setError("");const{error:e}=await supabase.from("pagos_reparacion").insert({orden_id:orden.id,taller_id:orden.taller_id,monto,metodo_pago:metodoPago,notas:notasPago.trim()||null});if(e)setError(`No se pudo registrar el pago: ${e.message}`);else{setMontoPago("");setNotasPago("");setMensaje(`Pago registrado: ${dinero(monto)}.`);await cargar();}setGuardando(false);};
   if(cargando) return <main className="min-h-screen bg-[#f5f6f8] flex items-center justify-center"><Loader2 size={32} className="animate-spin"/></main>;
   if(!orden) return <main className="min-h-screen bg-[#f5f6f8] p-8"><button onClick={()=>router.push("/reparaciones")} className="inline-flex items-center gap-2"><ArrowLeft size={17}/> Volver</button><div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">{error||"No se pudo cargar la reparación."}</div></main>;
 
@@ -127,6 +127,25 @@ export default function ReparacionDetallePage(){
           <div className="flex justify-end"><button disabled={guardando} onClick={()=>guardarPresupuesto(true)} className="rounded-xl bg-[#16a34a] px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#15803d]">Guardar y enviar aprobación <ArrowRight size={16} className="inline ml-1"/></button></div>
         </div>}
       </section>
+      <section id="cobros" className="scroll-mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between p-6"><div><div className="mb-2 inline-flex rounded-full bg-blue-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-blue-700">Paso 3</div><h2 className="text-xl font-black">Cobro de la reparación</h2><p className="text-sm text-gray-500">Registrá señas, pagos parciales o el pago total.</p></div><CreditCard className="text-blue-600" size={25}/></div>
+        <div className="border-t p-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-gray-50 p-4"><p className="text-xs font-bold uppercase text-gray-400">Total</p><p className="mt-1 text-2xl font-black">{dinero(total)}</p></div>
+            <div className="rounded-2xl bg-emerald-50 p-4"><p className="text-xs font-bold uppercase text-emerald-700">Abonado</p><p className="mt-1 text-2xl font-black text-emerald-700">{dinero(totalPagado)}</p></div>
+            <div className={"rounded-2xl p-4 "+(saldo>0?"bg-amber-50":"bg-green-50")}><p className="text-xs font-bold uppercase text-gray-500">Saldo</p><p className={"mt-1 text-2xl font-black "+(saldo>0?"text-amber-700":"text-green-700")}>{dinero(saldo)}</p></div>
+          </div>
+          <div className="mt-5 flex flex-wrap items-center gap-2"><span className={"rounded-full px-3 py-1 text-xs font-black "+(estadoPago==="PAGADO"?"bg-green-100 text-green-700":estadoPago==="PAGO PARCIAL"?"bg-blue-100 text-blue-700":"bg-amber-100 text-amber-700")}>{estadoPago}</span></div>
+          {saldo>0&&<div className="mt-5 grid gap-3 md:grid-cols-[180px_180px_1fr_auto]">
+            <input type="number" min="0.01" step="0.01" max={saldo} value={montoPago} onChange={e=>setMontoPago(e.target.value)} placeholder="Monto" className="h-11 rounded-xl border px-4"/>
+            <select value={metodoPago} onChange={e=>setMetodoPago(e.target.value)} className="h-11 rounded-xl border px-4"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>MERCADO PAGO</option><option>TARJETA</option><option>OTRO</option></select>
+            <input value={notasPago} onChange={e=>setNotasPago(e.target.value)} placeholder="Nota del pago (opcional)" className="h-11 rounded-xl border px-4"/>
+            <button disabled={guardando} onClick={registrarPago} className="h-11 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white hover:bg-blue-700"><CreditCard size={16} className="mr-1 inline"/>Registrar pago</button>
+          </div>}
+          {pagos.length>0&&<div className="mt-5 overflow-hidden rounded-xl border"><div className="grid grid-cols-[1fr_130px_130px] bg-gray-50 px-4 py-3 text-xs font-bold uppercase text-gray-400"><span>Fecha</span><span>Método</span><span className="text-right">Monto</span></div>{pagos.map(p=><div key={p.id} className="grid grid-cols-[1fr_130px_130px] border-t px-4 py-3 text-sm"><span>{fecha(p.created_at)}</span><span className="font-semibold">{p.metodo_pago}</span><span className="text-right font-black">{dinero(p.monto)}</span></div>)}</div>}
+        </div>
+      </section>
+
       <section id="reparacion" className="scroll-mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm">
         <button onClick={()=>setSeccion(seccion==="reparacion"?"diagnostico":"reparacion")} className="flex w-full items-center justify-between p-6 text-left"><div><div className="mb-2 inline-flex rounded-full bg-green-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#15803d]">Paso 3</div><h2 className="text-xl font-black">Reparación y entrega</h2><p className="text-sm text-gray-500">Cuando el presupuesto esté aprobado, continuás desde acá.</p></div>{seccion==="reparacion"?<ChevronUp/>:<ChevronDown/>}</button>
         {seccion==="reparacion"&&<div className="border-t p-6"><div className="grid gap-3 md:grid-cols-3"><button onClick={()=>router.push(`/reparaciones/${orden.id}/checklist`)} className="rounded-xl border border-gray-200 bg-white p-4 text-left font-bold shadow-sm hover:border-[#16a34a] hover:bg-green-50/40">Checklist</button><button onClick={()=>router.push(`/reparaciones/${orden.id}/fotos`)} className="rounded-xl border p-4 text-left font-bold">Fotos</button><button onClick={avanzar} disabled={!siguiente||guardando} className="rounded-xl bg-[#16a34a] p-4 text-left font-bold text-white shadow-sm hover:bg-[#15803d]">Avanzar reparación</button></div></div>}
