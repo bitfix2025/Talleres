@@ -124,7 +124,7 @@ export default function ReparacionDetallePage(){
         const r=await supabase.from("presupuesto_reparacion_items").update({cantidad:nueva,precio_unitario:precio,nombre_producto:nombreProducto}).eq("id",existente.id).select("id,orden_id,producto_id,nombre_producto,cantidad,precio_unitario,costo_unitario").single();
         if(r.error)throw new Error(r.error.message);
       }else{
-        const r=await supabase.from("presupuesto_reparacion_items").insert({taller_id:orden.taller_id||1,orden_id:orden.id,producto_id:p.id,nombre_producto:nombreProducto,cantidad:q,costo_unitario:costoProducto,precio_unitario:precio}).select("id,orden_id,producto_id,nombre_producto,cantidad,precio_unitario,costo_unitario").single();
+        const r=await supabase.from("presupuesto_reparacion_items").insert({orden_id:orden.id,producto_id:p.id,nombre_producto:nombreProducto,cantidad:q,costo_unitario:costoProducto,precio_unitario:precio}).select("id,orden_id,producto_id,nombre_producto,cantidad,precio_unitario,costo_unitario").single();
         if(r.error)throw new Error(r.error.message);
       }
       setMensaje(`${nombreProducto} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");await cargar();
