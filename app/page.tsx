@@ -935,7 +935,7 @@ function StatusBar({
 }
 
 function estadoBadge(estado:string) {
-  const e=normalizarEstado(estado);
+  const e=(estado || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").trim();
   if(e==="entregado") return "border-gray-200 bg-gray-100 text-gray-600";
   if(e==="en reparacion") return "border-purple-200 bg-purple-50 text-purple-700";
   if(e==="listo para entregar") return "border-emerald-200 bg-emerald-50 text-emerald-700";
