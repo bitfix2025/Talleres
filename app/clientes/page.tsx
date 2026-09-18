@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowLeft, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Users, Phone, Smartphone, ChevronRight, UserRound } from "lucide-react";
+import { ArrowLeft, Search, Plus, Users, Phone, Smartphone, ChevronRight, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Cliente = { id: string; nombre: string; dni?: string | null; telefono?: string | null };
