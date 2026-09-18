@@ -17,7 +17,7 @@ type Foto = { id:number; tipo:string; url:string };
 type Tecnico = { id:string; nombre:string|null; email:string|null; rol:string|null; activo:boolean };
 type Producto = { id:number; nombre:string; categoria:string|null; marca:string|null; modelo:string|null; sku:string|null; costo:number|null; precio:number|null; stock_actual:number; activo:boolean };
 type Item = { id:number; producto_id:number; cantidad:number; precio_unitario:number; costo_unitario:number; producto:Producto|null };
-type Pago = { id:number; monto:number; metodo_pago:string; observaciones:string|null; created_at:string };
+type Pago = { id:number; monto:number; monto_usd?:number; metodo_pago:string; concepto?:string|null; observaciones:string|null; fecha_pago?:string; created_at:string };
 type Paso = { db:string; key:string; label:string };
 
 const FLUJO:Paso[] = [
@@ -68,7 +68,7 @@ export default function ReparacionDetallePage(){
     const {data:fd}=await supabase.from("fotos_recepcion").select("id,tipo,url").eq("orden_id",ordenId).order("id");setFotos((fd||[]) as Foto[]);
     const {data:pd,error:pe}=await supabase.from("productos").select("id,nombre,categoria,marca,modelo,sku,costo,precio,stock_actual,activo").eq("taller_id",data.taller_id||1).eq("activo",true).order("nombre");
     if(!pe)setProductos((pd||[]) as Producto[]);
-    const {data:pg,error:pge}=await supabase.from("pagos_reparacion").select("id,monto,metodo_pago,observaciones,created_at").eq("orden_id",ordenId).order("created_at",{ascending:false});
+    const {data:pg,error:pge}=await supabase.from("pagos_reparacion").select("id,monto,monto_usd,metodo_pago,concepto,observaciones,fecha_pago,created_at").eq("orden_id",ordenId).order("created_at",{ascending:false});
     if(!pge)setPagos((pg||[]) as Pago[]);
     const {data:id,error:ie}=await supabase.from("presupuesto_reparacion_items").select("id,producto_id,cantidad,precio_unitario,costo_unitario").eq("orden_id",ordenId).order("id");
     if(!ie){const lista=(id||[]) as Omit<Item,"producto">[];setItems(lista.map(x=>({...x,producto:(pd||[]).find((p:any)=>p.id===x.producto_id)||null})));}else if(!ie.message.includes("does not exist")){setError(`No se pudieron cargar los repuestos: ${ie.message}`);}
@@ -117,7 +117,7 @@ export default function ReparacionDetallePage(){
   const totalRepuestos=items.reduce((s,i)=>s+Number(i.cantidad||0)*Number(i.precio_unitario||0),0),total=totalRepuestos+(Number(manoObra)||0);
   const totalPagado=pagos.reduce((s,p)=>s+Number(p.monto||0),0),saldo=Math.max(0,total-totalPagado);
   const estadoPago=saldo<=0&&total>0?"PAGADO":totalPagado>0?"PAGO PARCIAL":"PENDIENTE";
-  const registrarPago=async()=>{if(!orden)return;const monto=Number(montoPago);if(!Number.isFinite(monto)||monto<=0)return setError("Ingresá un monto de pago válido.");if(monto>saldo+0.01)return setError(`El pago supera el saldo pendiente de ${dinero(saldo)}.`);setGuardando(true);setError("");const{error:e}=await supabase.from("pagos_reparacion").insert({taller_id:orden.taller_id,orden_id:orden.id,monto,metodo_pago:metodoPago,observaciones:notasPago.trim()||null});if(e)setError(`No se pudo registrar el pago: ${e.message}`);else{setMontoPago("");setNotasPago("");setMensaje(`Pago registrado: ${dinero(monto)}.`);await cargar();}setGuardando(false);};
+  const registrarPago=async()=>{if(!orden)return;const monto=Number(montoPago);if(!Number.isFinite(monto)||monto<=0)return setError("Ingresá un monto de pago válido.");if(monto>saldo+0.01)return setError(`El pago supera el saldo pendiente de ${dinero(saldo)}.`);setGuardando(true);setError("");const{error:e}=await supabase.from("pagos_reparacion").insert({taller_id:orden.taller_id ?? null,orden_id:orden.id,monto,monto_usd:monto,metodo_pago:metodoPago,concepto:"Pago de reparación",observaciones:notasPago.trim()||null,fecha_pago:new Date().toISOString()});if(e)setError(`No se pudo registrar el pago: ${e.message}`);else{setMontoPago("");setNotasPago("");setMensaje(`Pago registrado: ${dinero(monto)}.`);await cargar();}setGuardando(false);};
   if(cargando) return <main className="min-h-screen bg-[#f5f6f8] flex items-center justify-center"><Loader2 size={32} className="animate-spin"/></main>;
   if(!orden) return <main className="min-h-screen bg-[#f5f6f8] p-8"><button onClick={()=>router.push("/reparaciones")} className="inline-flex items-center gap-2"><ArrowLeft size={17}/> Volver</button><div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">{error||"No se pudo cargar la reparación."}</div></main>;
 
