@@ -552,7 +552,7 @@ export default function ChecklistPage() {
           return;
         }
 
-        const item = ITEMS.find(
+        const item = itemsChecklist.find(
           (item) =>
             item.prueba === fila.prueba
         );
@@ -957,7 +957,7 @@ export default function ChecklistPage() {
    * ==========================================================
    */
 
-  const guardarChecklist = async () => {
+  const itemsChecklist = esApple ? ITEMS : itemsChecklist.filter((item) => item.id !== "face_id");\n\n  const guardarChecklist = async () => {
     if (bloqueado) {
       setMensaje(
         "Este checklist ya está cerrado."
@@ -1038,7 +1038,7 @@ export default function ChecklistPage() {
        */
 
       const seleccionados =
-        ITEMS.filter(
+        itemsChecklist.filter(
           (item) =>
             respuestas[item.id]
         );
@@ -1716,7 +1716,7 @@ export default function ChecklistPage() {
                   (categoria) => {
 
                     const items =
-                      ITEMS.filter(
+                      itemsChecklist.filter(
                         (item) =>
                           item.categoria ===
                           categoria
