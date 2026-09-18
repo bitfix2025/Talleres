@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, UserRound, Smartphone, Plus, ArrowLeft, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
-type Cliente = { id: string; nombre: string; telefono: string | null };
+type Cliente = { id: string; nombre: string; dni: string | null; telefono: string | null };
 type Equipo = { id: string; marca: string | null; modelo: string | null; imei: string | null; numero_serie: string | null; color: string | null; capacidad: string | null; bateria_porcentaje: number | null; cliente_id: string };
 
 export default function NuevaReparacionPage() {
@@ -20,6 +20,7 @@ export default function NuevaReparacionPage() {
   const [modoNuevoEquipo, setModoNuevoEquipo] = useState(false);
 
   const [clienteNombre, setClienteNombre] = useState("");
+  const [clienteDni, setClienteDni] = useState("");
   const [clienteTelefono, setClienteTelefono] = useState("");
   const [modelo, setModelo] = useState("");
   const [imei, setImei] = useState("");
@@ -34,7 +35,7 @@ export default function NuevaReparacionPage() {
 
   useEffect(() => {
     const cargarClientes = async () => {
-      const { data, error } = await supabase.from("clientes").select("id,nombre,telefono").order("nombre");
+      const { data, error } = await supabase.from("clientes").select("id,nombre,dni,telefono").order("nombre");
       if (!error) setClientes((data || []) as Cliente[]);
     };
     cargarClientes();
@@ -55,12 +56,13 @@ export default function NuevaReparacionPage() {
   const clientesFiltrados = useMemo(() => {
     const q = buscarCliente.trim().toLowerCase();
     if (!q) return clientes.slice(0, 8);
-    return clientes.filter(c => `${c.nombre} ${c.telefono || ""}`.toLowerCase().includes(q)).slice(0, 8);
+    return clientes.filter(c => `${c.nombre} ${c.dni || ""} ${c.telefono || ""}`.toLowerCase().includes(q)).slice(0, 8);
   }, [clientes, buscarCliente]);
 
   const seleccionarCliente = (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
     setClienteNombre(cliente.nombre);
+    setClienteDni(cliente.dni || "");
     setClienteTelefono(cliente.telefono || "");
     setBuscarCliente("");
     setMostrarClientes(false);
@@ -75,6 +77,7 @@ export default function NuevaReparacionPage() {
     setEquipoSeleccionado(null);
     setEquipos([]);
     setClienteNombre("");
+    setClienteDni("");
     setClienteTelefono("");
     setBuscarCliente("");
     setMostrarClientes(false);
@@ -120,8 +123,8 @@ export default function NuevaReparacionPage() {
       let cliente = clienteSeleccionado;
 
       if (!cliente) {
-        let query = supabase.from("clientes").select("id,nombre,telefono").eq("taller_id", tallerId).limit(1);
-        if (clienteTelefono.trim()) query = query.eq("telefono", clienteTelefono.trim());
+        let query = supabase.from("clientes").select("id,nombre,dni,telefono").eq("taller_id", tallerId).limit(1);
+        if (clienteDni.trim()) query = query.eq("dni", clienteDni.trim());
         else query = query.eq("nombre", clienteNombre.trim());
         const existente = await query.maybeSingle();
         if (existente.error) throw new Error(`No se pudo buscar el cliente: ${existente.error.message}`);
@@ -130,7 +133,7 @@ export default function NuevaReparacionPage() {
           cliente = existente.data as Cliente;
           setClienteSeleccionado(cliente);
         } else {
-          const creado = await supabase.from("clientes").insert({ taller_id: tallerId, nombre: clienteNombre.trim(), telefono: clienteTelefono.trim() || null }).select("id,nombre,telefono").single();
+          const creado = await supabase.from("clientes").insert({ taller_id: tallerId, nombre: clienteNombre.trim(), dni: clienteDni.trim(), telefono: clienteTelefono.trim() || null }).select("id,nombre,dni,telefono").single();
           if (creado.error) throw new Error(`No se pudo crear el cliente: ${creado.error.message}`);
           cliente = creado.data as Cliente;
         }
@@ -207,15 +210,15 @@ export default function NuevaReparacionPage() {
                 <div className="mt-4">
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
-                    <input value={buscarCliente} onChange={e => {setBuscarCliente(e.target.value);setMostrarClientes(true)}} onFocus={() => setMostrarClientes(true)} placeholder="Buscar por nombre o teléfono..." className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm outline-none focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"/>
-                    {mostrarClientes && clientesFiltrados.length > 0 && <div className="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-xl">{clientesFiltrados.map(c => <button key={c.id} onClick={() => seleccionarCliente(c)} className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-green-50"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700"><UserRound size={16}/></span><span><b className="block text-sm">{c.nombre}</b><small className="text-gray-500">{c.telefono || "Sin teléfono"}</small></span></button>)}</div>}
+                    <input value={buscarCliente} onChange={e => {setBuscarCliente(e.target.value);setMostrarClientes(true)}} onFocus={() => setMostrarClientes(true)} placeholder="Buscar por nombre, DNI o teléfono..." className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm outline-none focus:border-green-500 focus:bg-white focus:ring-2 focus:ring-green-100"/>
+                    {mostrarClientes && clientesFiltrados.length > 0 && <div className="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-xl">{clientesFiltrados.map(c => <button key={c.id} onClick={() => seleccionarCliente(c)} className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-green-50"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700"><UserRound size={16}/></span><span><b className="block text-sm">{c.nombre}</b><small className="text-gray-500">DNI: {c.dni || "Sin DNI"} · {c.telefono || "Sin teléfono"}</small></span></button>)}</div>}
                   </div>
                   <button onClick={prepararNuevoCliente} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-green-700 hover:text-green-800"><Plus size={16}/> Crear nuevo cliente</button>
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-green-200 bg-green-50/50 p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-green-700"><UserRound size={19}/></div><div><p className="font-bold">{clienteSeleccionado?.nombre || "Nuevo cliente"}</p><p className="text-xs text-gray-500">{clienteSeleccionado?.telefono || clienteTelefono || "Sin teléfono"}</p></div></div><button onClick={() => {setClienteSeleccionado(null);setModoNuevoCliente(false);setModoNuevoEquipo(false);setEquipoSeleccionado(null);setEquipos([])}} className="text-xs font-bold text-gray-500 hover:text-green-700">Cambiar</button></div>
-                  {modoNuevoCliente && <div className="mt-4 grid gap-3 md:grid-cols-2"><input value={clienteNombre} onChange={e=>setClienteNombre(e.target.value)} placeholder="Nombre completo *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/><input value={clienteTelefono} onChange={e=>setClienteTelefono(e.target.value)} placeholder="Teléfono" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/></div>}
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-green-700"><UserRound size={19}/></div><div><p className="font-bold">{clienteSeleccionado?.nombre || "Nuevo cliente"}</p><p className="text-xs text-gray-500">DNI: {clienteSeleccionado?.dni || clienteDni || "Sin DNI"} · {clienteSeleccionado?.telefono || clienteTelefono || "Sin teléfono"}</p></div></div><button onClick={() => {setClienteSeleccionado(null);setModoNuevoCliente(false);setModoNuevoEquipo(false);setEquipoSeleccionado(null);setEquipos([])}} className="text-xs font-bold text-gray-500 hover:text-green-700">Cambiar</button></div>
+                  {modoNuevoCliente && <div className="mt-4 grid gap-3 md:grid-cols-3"><input value={clienteNombre} onChange={e=>setClienteNombre(e.target.value)} placeholder="Nombre completo *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/><input value={clienteDni} onChange={e=>setClienteDni(e.target.value)} placeholder="DNI *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/><input value={clienteTelefono} onChange={e=>setClienteTelefono(e.target.value)} placeholder="Teléfono *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/></div>}
                 </div>
               )}
             </section>
