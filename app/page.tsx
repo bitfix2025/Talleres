@@ -38,10 +38,10 @@ export default function Home() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
-  const [rol, setRol] = useState<RolUsuario>("administrador");
+  const [rol, setRol] = useState<RolUsuario>("ADMIN");
   useEffect(()=>{(async()=>{const {data:{user}}=await supabase.auth.getUser(); if(!user)return; const {data}=await supabase.from("perfiles").select("rol").eq("id",user.id).maybeSingle(); if(data?.rol)setRol(data.rol as RolUsuario)})()},[]);
 
-  const permitido=(ruta:string)=>rol==="administrador"||ruta==="/"||(rol==="tecnico"?["/reparaciones","/clientes","/equipos"]:["/reparaciones","/clientes","/equipos","/presupuestos"]).some(r=>ruta===r);
+  const rolNormalizado=String(rol||"").toUpperCase(); const permitido=(ruta:string)=>rolNormalizado==="ADMIN"||ruta==="/"||(rolNormalizado==="TECNICO"?["/reparaciones","/clientes","/equipos"]:["/reparaciones","/clientes","/equipos","/presupuestos","/inventario","/compras","/ventas"]).some(r=>ruta===r);
   const irA = (ruta: string) => { if(!permitido(ruta)) return;
     setMenuAbierto(false);
     router.push(ruta);
