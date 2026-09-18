@@ -9,7 +9,7 @@ export function puedeAcceder(rol: RolUsuario | string, pathname: string) {
 }
 
 export const MENU_POR_ROL: Record<RolUsuario,string[]> = {
-  ADMIN:["/","/reparaciones","/clientes","/equipos","/inventario","/compras","/ventas","/presupuestos","/reportes","/configuracion"],
+  ADMIN:["/","/reparaciones","/clientes","/equipos","/inventario","/compras","/ventas","/presupuestos","/reportes","/facturacion","/configuracion"],
   ENCARGADO:["/","/reparaciones","/clientes","/equipos","/presupuestos","/inventario","/compras","/ventas"],
   TECNICO:["/","/reparaciones","/clientes","/equipos"],
 };
