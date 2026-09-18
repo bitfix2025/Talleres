@@ -743,7 +743,8 @@ function SidebarItem({
   label: string;
   activo?: boolean;
   onClick?: () => void;
-; visible?: boolean}) {
+  visible?: boolean;
+}) {
   return (
     <button
       type="button"
