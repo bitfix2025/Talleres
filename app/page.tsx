@@ -535,7 +535,7 @@ export default function Home() {
                             <td className="px-5 py-4 text-sm font-bold">#{orden.id}</td>
                             <td className="px-5 py-4 text-sm font-semibold">{[equipo?.marca, equipo?.modelo].filter(Boolean).join(" ") || "Sin equipo"}</td>
                             <td className="max-w-[280px] truncate px-5 py-4 text-sm text-gray-500">{orden.falla_reportada || "Sin diagnóstico registrado"}</td>
-                            <td className="px-5 py-4 text-sm font-semibold">{orden.estado || "Sin estado"}</td>
+                            <td className="px-5 py-4"><span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${estadoBadge(orden.estado)}`}>{orden.estado || "Sin estado"}</span></td>
                             <td className="px-5 py-4 text-sm text-gray-500">{orden.created_at ? new Date(orden.created_at).toLocaleDateString("es-AR") : "-"}</td>
                           </tr>
                         );
@@ -932,6 +932,17 @@ function StatusBar({
       </div>
     </div>
   );
+}
+
+function estadoBadge(estado:string) {
+  const e=normalizarEstado(estado);
+  if(e==="entregado") return "border-gray-200 bg-gray-100 text-gray-600";
+  if(e==="en reparacion") return "border-purple-200 bg-purple-50 text-purple-700";
+  if(e==="listo para entregar") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if(e==="diagnostico") return "border-amber-200 bg-amber-50 text-amber-700";
+  if(e==="presupuestado" || e==="esperando aprobacion") return "border-blue-200 bg-blue-50 text-blue-700";
+  if(e==="aprobado") return "border-indigo-200 bg-indigo-50 text-indigo-700";
+  return "border-gray-200 bg-white text-gray-600";
 }
 
 function StatusBarCompact({nombre,cantidad,icon,className}:{nombre:string;cantidad:string;icon:React.ReactNode;className:string}) {
