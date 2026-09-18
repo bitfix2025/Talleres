@@ -220,6 +220,12 @@ export default function Home() {
                 onClick={() => irA("/reportes")}
                 visible={String(rol).toUpperCase()==="ADMIN"}
               />
+              <SidebarItem
+                icon={<DollarSign size={18} />}
+                label="Facturación"
+                onClick={() => irA("/facturacion")}
+                visible={String(rol).toUpperCase()==="ADMIN"}
+              />
 
               <div className="my-6 border-t border-white/10" />
 
