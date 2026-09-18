@@ -9,7 +9,7 @@ export async function POST(req:NextRequest){
  if(!ordenId || token!==tokenFor(ordenId) || !(archivo instanceof File)) return NextResponse.json({error:"Enlace de fotos inválido."},{status:403});
  if(!archivo.type.startsWith("image/")) return NextResponse.json({error:"Solo se permiten imágenes."},{status:400});
  if(archivo.size>10*1024*1024) return NextResponse.json({error:"La foto supera 10 MB."},{status:400});
- const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+ const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,secret);
  const bytes=Buffer.from(await archivo.arrayBuffer()); const ext=(archivo.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
  const ruta="orden-"+ordenId+"/"+ordenId+"_movil_"+tipo+"_"+Date.now()+"."+ext;
  const {error:up}=await supabase.storage.from("recepcion-fotos").upload(ruta,bytes,{contentType:archivo.type,upsert:false});
