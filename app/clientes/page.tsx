@@ -1,6 +1,6 @@
 "use client";
 
-import {\n  ArrowLeft, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Plus, Users, Phone, Smartphone, ChevronRight, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
