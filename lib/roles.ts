@@ -1,14 +1,15 @@
-export type RolUsuario = "administrador" | "tecnico" | "recepcion";
+export type RolUsuario = "ADMIN" | "ENCARGADO" | "TECNICO";
 
-export function puedeAcceder(rol: RolUsuario, pathname: string) {
-  if (rol === "administrador") return true;
-  if (pathname === "/") return true;
-  if (rol === "tecnico") return ["/reparaciones","/clientes","/equipos"].some(r => pathname === r || pathname.startsWith(r + "/"));
-  return ["/reparaciones","/clientes","/equipos","/presupuestos"].some(r => pathname === r || pathname.startsWith(r + "/"));
+export function puedeAcceder(rol: RolUsuario | string, pathname: string) {
+  const r = String(rol || "").toUpperCase();
+  if (r === "ADMIN") return true;
+  if (r === "TECNICO") return ["/","/reparaciones","/clientes","/equipos"].some(p => pathname === p || pathname.startsWith(p + "/"));
+  if (r === "ENCARGADO") return ["/","/reparaciones","/clientes","/equipos","/presupuestos","/inventario","/compras","/ventas"].some(p => pathname === p || pathname.startsWith(p + "/"));
+  return pathname === "/";
 }
 
 export const MENU_POR_ROL: Record<RolUsuario,string[]> = {
-  administrador:["/","/reparaciones","/clientes","/equipos","/inventario","/compras","/ventas","/presupuestos","/reportes","/configuracion"],
-  tecnico:["/","/reparaciones","/clientes","/equipos"],
-  recepcion:["/","/reparaciones","/clientes","/equipos","/presupuestos"],
+  ADMIN:["/","/reparaciones","/clientes","/equipos","/inventario","/compras","/ventas","/presupuestos","/reportes","/configuracion"],
+  ENCARGADO:["/","/reparaciones","/clientes","/equipos","/presupuestos","/inventario","/compras","/ventas"],
+  TECNICO:["/","/reparaciones","/clientes","/equipos"],
 };
