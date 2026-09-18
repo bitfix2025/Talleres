@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowLeft, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Smartphone, UserRound, Wrench, ChevronRight, Plus } from "lucide-react";
+import { ArrowLeft, Search, Smartphone, UserRound, Wrench, ChevronRight, Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Equipo = { id: string; marca?: string | null; modelo?: string | null; imei?: string | null; cliente_id: string };
