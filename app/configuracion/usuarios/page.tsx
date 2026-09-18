@@ -24,3 +24,5 @@ export default function UsuariosPage(){
   </div></div>)}</div>
   {!items.length&&!error&&<div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center"><ShieldCheck className="mx-auto text-gray-300" size={30}/><p className="mt-3 text-sm font-semibold text-gray-600">No hay usuarios registrados.</p></div>}
  </div></main>
+
+}
