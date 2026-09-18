@@ -660,34 +660,11 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="mt-6 space-y-5">
-                  <StatusBar
-                    nombre="Recibidos"
-                    cantidad={String(recibidos)}
-                    icon={<ClipboardCheck size={14} />}
-                    className="bg-blue-500"
-                  />
-
-                  <StatusBar
-                    nombre="Diagnóstico"
-                    cantidad={String(ordenes.filter(o=>normalizarEstado(o.estado)==="diagnostico").length)}
-                    icon={<Search size={14} />}
-                    className="bg-yellow-500"
-                  />
-
-                  <StatusBar
-                    nombre="En reparación"
-                    cantidad={String(enReparacion)}
-                    icon={<Wrench size={14} />}
-                    className="bg-purple-500"
-                  />
-
-                  <StatusBar
-                    nombre="Listos"
-                    cantidad={String(listos)}
-                    icon={<CheckCircle2 size={14} />}
-                    className="bg-[#18a66b]"
-                  />
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <StatusBarCompact nombre="Recibidos" cantidad={String(recibidos)} icon={<ClipboardCheck size={14} />} className="bg-blue-500" />
+                  <StatusBarCompact nombre="Diagnóstico" cantidad={String(ordenes.filter(o=>normalizarEstado(o.estado)==="diagnostico").length)} icon={<Search size={14} />} className="bg-yellow-500" />
+                  <StatusBarCompact nombre="En reparación" cantidad={String(enReparacion)} icon={<Wrench size={14} />} className="bg-purple-500" />
+                  <StatusBarCompact nombre="Listos" cantidad={String(listos)} icon={<CheckCircle2 size={14} />} className="bg-[#18a66b]" />
                 </div>
               </div>
 
@@ -952,6 +929,18 @@ function StatusBar({
         <div
           className={`h-full w-0 rounded-full ${className}`}
         />
+      </div>
+    </div>
+  );
+}
+
+function StatusBarCompact({nombre,cantidad,icon,className}:{nombre:string;cantidad:string;icon:React.ReactNode;className:string}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-[#fafbfb] px-3.5 py-3">
+      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white ${className}`}>{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[11px] font-semibold text-gray-600">{nombre}</p>
+        <p className="mt-0.5 text-lg font-bold leading-none text-gray-950">{cantidad}</p>
       </div>
     </div>
   );
