@@ -11,8 +11,9 @@ import { supabase } from "../../../lib/supabase";
 
 type Cliente = { nombre: string | null; dni: string | null; telefono: string | null };
 type Equipo = { marca:string|null; modelo:string|null; imei:string|null; numero_serie:string|null; color:string|null; capacidad:string|null; bateria_porcentaje:number|null };
-type Orden = { contrasena_equipo?: string | null; id:number; taller_id:number|null; cliente_id:number|null; equipo_id:number|null; estado:string|null; falla_reportada:string|null; observaciones:string|null; created_at:string|null; presupuesto_mano_obra:number|null; cliente:Cliente|null; equipo:Equipo|null };
+type Orden = { contrasena_equipo?: string | null; id:number; tecnico_id?:string|null; taller_id:number|null; cliente_id:number|null; equipo_id:number|null; estado:string|null; falla_reportada:string|null; observaciones:string|null; created_at:string|null; presupuesto_mano_obra:number|null; cliente:Cliente|null; equipo:Equipo|null };
 type Foto = { id:number; tipo:string; url:string };
+type Tecnico = { id:string; nombre:string|null; email:string|null; rol:string|null; activo:boolean };
 type Producto = { id:number; nombre:string; categoria:string|null; marca:string|null; modelo:string|null; sku:string|null; costo:number|null; precio:number|null; stock_actual:number; activo:boolean };
 type Item = { id:number; producto_id:number; cantidad:number; precio_unitario:number; costo_unitario:number; producto:Producto|null };
 type Paso = { db:string; key:string; label:string };
@@ -37,6 +38,7 @@ export default function ReparacionDetallePage(){
   const params=useParams(); const router=useRouter(); const ordenId=Number(params.id);
   const [orden,setOrden]=useState<Orden|null>(null),[fotos,setFotos]=useState<Foto[]>([]);
   const [diagnostico,setDiagnostico]=useState(""),[notas,setNotas]=useState("");
+  const [tecnicos,setTecnicos]=useState<Tecnico[]>([]),[tecnicoId,setTecnicoId]=useState("");
   const [contrasenaEquipo,setContrasenaEquipo]=useState("");
   const [productos,setProductos]=useState<Producto[]>([]),[items,setItems]=useState<Item[]>([]);
   const [productoId,setProductoId]=useState(""),[cantidad,setCantidad]=useState("1"),[precioVenta,setPrecioVenta]=useState(""),[busqueda,setBusqueda]=useState("");
@@ -44,11 +46,13 @@ export default function ReparacionDetallePage(){
 
   const cargar=async()=>{
     setCargando(true);setError("");
-    const {data,error:e}=await supabase.from("ordenes_reparacion").select(`id,taller_id,cliente_id,equipo_id,estado,falla_reportada,observaciones,created_at,presupuesto_mano_obra,contrasena_equipo,clientes(nombre,dni,telefono),equipos(marca,modelo,imei,numero_serie,color,capacidad,bateria_porcentaje)`).eq("id",ordenId).maybeSingle();
+    const {data,error:e}=await supabase.from("ordenes_reparacion").select(`id,tecnico_id,taller_id,cliente_id,equipo_id,estado,falla_reportada,observaciones,created_at,presupuesto_mano_obra,contrasena_equipo,clientes(nombre,dni,telefono),equipos(marca,modelo,imei,numero_serie,color,capacidad,bateria_porcentaje)`).eq("id",ordenId).maybeSingle();
     if(e||!data){setError(e?.message||"La orden no existe.");setOrden(null);setCargando(false);return;}
     const cliente=Array.isArray(data.clientes)?data.clientes[0]||null:data.clientes||null; const equipo=Array.isArray(data.equipos)?data.equipos[0]||null:data.equipos||null;
     setOrden({...data,cliente,equipo} as Orden);
     const obs=data.observaciones||""; const dm=obs.match(/Diagnóstico:\s*([\s\S]*?)(?:\n\nNotas técnicas:|$)/i);const nm=obs.match(/Notas técnicas:\s*([\s\S]*)$/i);setDiagnostico(dm?.[1]?.trim()||"");setNotas(nm?.[1]?.trim()||(dm?"":obs));setManoObra(data.presupuesto_mano_obra!=null?String(data.presupuesto_mano_obra):""); setContrasenaEquipo(data.contrasena_equipo||"");
+    const {data:td}=await supabase.from("perfiles").select("id,nombre,email,rol,activo").eq("activo",true).in("rol",["TECNICO","tecnico"]); setTecnicos((td||[]) as Tecnico[]);
+    setTecnicoId((data as any).tecnico_id||"");
     const {data:fd}=await supabase.from("fotos_recepcion").select("id,tipo,url").eq("orden_id",ordenId).order("id");setFotos((fd||[]) as Foto[]);
     const {data:pd,error:pe}=await supabase.from("productos").select("id,nombre,categoria,marca,modelo,sku,costo,precio,stock_actual,activo").eq("taller_id",data.taller_id||1).eq("activo",true).order("nombre");
     if(!pe)setProductos((pd||[]) as Producto[]);
@@ -65,9 +69,9 @@ export default function ReparacionDetallePage(){
   const seleccionado=productos.find(p=>p.id===Number(productoId));
   useEffect(()=>{if(seleccionado)setPrecioVenta(String(seleccionado.precio??0));},[seleccionado]);
 
-  const cambiarEstado=async(db:string)=>{if(!orden||guardando)return;setGuardando(true);setError("");setMensaje("");const{error:e}=await supabase.from("ordenes_reparacion").update({estado:db}).eq("id",orden.id);if(e)setError(e.message);else{setOrden({...orden,estado:db});setMensaje(`Estado actualizado a ${db}.`);}setGuardando(false);};
+  const cambiarEstado=async(db:string)=>{if(!orden||guardando)return;setGuardando(true);setError("");setMensaje("");const anterior=orden.estado||null;const payload:any={estado:db};if(db==="ENTREGADO")payload.entregado_at=new Date().toISOString();const{error:e}=await supabase.from("ordenes_reparacion").update(payload).eq("id",orden.id);if(e){setError(e.message);}else{await supabase.rpc("registrar_historial_reparacion",{p_orden_id:orden.id,p_tipo:"ESTADO",p_estado_anterior:anterior,p_estado_nuevo:db,p_descripcion:`Estado cambiado de ${anterior||"-"} a ${db}.`});setOrden({...orden,estado:db});setMensaje(`Estado actualizado a ${db}.`);}setGuardando(false);};
   const avanzar=async()=>{if(!siguiente||!orden)return;await cambiarEstado(siguiente.db);};
-  const guardarNotas=async()=>{if(!orden)return;setGuardando(true);setError("");let observaciones=diagnostico.trim()?`Diagnóstico:\n${diagnostico.trim()}`:"";if(notas.trim())observaciones+=`${observaciones?"\n\n":""}Notas técnicas:\n${notas.trim()}`;const{error:e}=await supabase.from("ordenes_reparacion").update({observaciones,contrasena_equipo:contrasenaEquipo.trim()||null}).eq("id",orden.id);if(e)setError(e.message);else{setOrden({...orden,observaciones});setMensaje("Diagnóstico y notas guardados.");}setGuardando(false);};
+  const guardarNotas=async()=>{if(!orden)return;setGuardando(true);setError("");let observaciones=diagnostico.trim()?`Diagnóstico:\n${diagnostico.trim()}`:"";if(notas.trim())observaciones+=`${observaciones?"\n\n":""}Notas técnicas:\n${notas.trim()}`;const{error:e}=await supabase.from("ordenes_reparacion").update({observaciones,contrasena_equipo:contrasenaEquipo.trim()||null}).eq("id",orden.id);if(e)setError(e.message);else{setOrden({...orden,observaciones,contrasena_equipo:contrasenaEquipo.trim()||null});await supabase.rpc("registrar_historial_reparacion",{p_orden_id:orden.id,p_tipo:"NOTA",p_estado_anterior:orden.estado,p_estado_nuevo:orden.estado,p_descripcion:"Se actualizaron diagnóstico, notas técnicas o contraseña del equipo."});setMensaje("Diagnóstico, notas y contraseña guardados.");}setGuardando(false);};
 
   const agregarRepuesto=async()=>{setError("");setMensaje("");const p=productos.find(x=>x.id===Number(productoId));const q=Number(cantidad);const precio=Number(precioVenta);if(!p)return setError("Seleccioná un repuesto del inventario.");if(!Number.isInteger(q)||q<=0)return setError("La cantidad debe ser mayor a 0.");if(!Number.isFinite(precio)||precio<0)return setError("Ingresá un precio válido.");const existente=items.find(x=>x.producto_id===p.id);const nueva=(existente?.cantidad||0)+q;if(nueva>p.stock_actual)return setError(`Stock insuficiente. ${p.nombre}: ${p.stock_actual} disponible(s).`);setGuardando(true);let e;if(existente){e=(await supabase.from("presupuesto_reparacion_items").update({cantidad:nueva,precio_unitario:precio}).eq("id",existente.id)).error;}else{e=(await supabase.from("presupuesto_reparacion_items").insert({orden_id:ordenId,producto_id:p.id,cantidad:q,costo_unitario:Number(p.costo||0),precio_unitario:precio})).error;}if(e)setError(`No se pudo guardar el repuesto: ${e.message}`);else{setMensaje(`${p.nombre} agregado al presupuesto.`);setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");await cargar();}setGuardando(false);};
   const eliminarRepuesto=async(id:number)=>{setGuardando(true);setError("");const{error:e}=await supabase.from("presupuesto_reparacion_items").delete().eq("id",id);if(e)setError(e.message);else setMensaje("Repuesto eliminado.");await cargar();setGuardando(false);};
@@ -90,6 +94,19 @@ export default function ReparacionDetallePage(){
     {mensaje&&<div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">{mensaje}</div>}{error&&<div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
 
     <div className="mt-6 space-y-4">
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-400">Responsable</p><h2 className="mt-1 text-xl font-black">Técnico asignado</h2><p className="text-sm text-gray-500">Asigná quién realizará la reparación de esta orden.</p></div>
+          <Wrench className="text-[#16a34a]" size={22}/>
+        </div>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <select value={tecnicoId} onChange={e=>setTecnicoId(e.target.value)} className="h-11 flex-1 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold outline-none focus:border-[#16a34a]">
+            <option value="">Sin técnico asignado</option>
+            {tecnicos.map(t=><option key={t.id} value={t.id}>{t.nombre||t.email||"Técnico"}{t.email&&t.nombre ? " · "+t.email : ""}</option>)}
+          </select>
+          <button disabled={guardando} onClick={async()=>{if(!orden)return;setGuardando(true);setError("");const{error:e}=await supabase.from("ordenes_reparacion").update({tecnico_id:tecnicoId||null}).eq("id",orden.id);if(e)setError(e.message);else{setMensaje(tecnicoId?"Técnico asignado correctamente.":"Técnico desasignado.");await supabase.rpc("registrar_historial_reparacion",{p_orden_id:orden.id,p_tipo:"TECNICO",p_estado_anterior:orden.estado,p_estado_nuevo:orden.estado,p_descripcion:tecnicoId?"Técnico asignado: "+(tecnicos.find(t=>t.id===tecnicoId)?.nombre||tecnicoId):"Técnico desasignado."});}setGuardando(false);}} className="h-11 rounded-xl bg-[#16a34a] px-5 text-sm font-bold text-white hover:bg-[#15803d]">Guardar técnico</button>
+        </div>
+      </section>
       <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="grid gap-4 md:grid-cols-2">
           <div><p className="text-xs font-bold uppercase text-gray-400">Cliente</p><p className="mt-1 text-lg font-bold">{orden.cliente?.nombre||"Sin nombre"}</p><p className="text-sm text-gray-500">{orden.cliente?.telefono||"Sin teléfono"}</p></div>
