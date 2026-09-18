@@ -41,7 +41,7 @@ export default function ReparacionDetallePage(){
   const [diagnostico,setDiagnostico]=useState(""),[notas,setNotas]=useState("");
   const [tecnicos,setTecnicos]=useState<Tecnico[]>([]),[tecnicoId,setTecnicoId]=useState("");
   const [contrasenaEquipo,setContrasenaEquipo]=useState("");
-  const [productos,setProductos]=useState<Producto[]>([]),[items,setItems]=useState<Item[]>([]);
+  const [productos,setProductos]=useState<Producto[]>([]),[items,setItems]=useState<Item[]>([]);\n   type Pago={id:number;monto:number;metodo_pago:string;notas:string|null;created_at:string};\n   const [pagos,setPagos]=useState<Pago[]>([]),[montoPago,setMontoPago]=useState(""),[metodoPago,setMetodoPago]=useState("EFECTIVO"),[notasPago,setNotasPago]=useState("");
   const [productoId,setProductoId]=useState(""),[cantidad,setCantidad]=useState("1"),[precioVenta,setPrecioVenta]=useState(""),[busqueda,setBusqueda]=useState("");
   const [manoObra,setManoObra]=useState(""),[seccion,setSeccion]=useState<"diagnostico"|"presupuesto"|"reparacion">("diagnostico"),[cargando,setCargando]=useState(true),[guardando,setGuardando]=useState(false),[error,setError]=useState(""),[mensaje,setMensaje]=useState("");
 
