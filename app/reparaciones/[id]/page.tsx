@@ -41,7 +41,9 @@ export default function ReparacionDetallePage(){
   const [diagnostico,setDiagnostico]=useState(""),[notas,setNotas]=useState("");
   const [tecnicos,setTecnicos]=useState<Tecnico[]>([]),[tecnicoId,setTecnicoId]=useState("");
   const [contrasenaEquipo,setContrasenaEquipo]=useState("");
-  const [productos,setProductos]=useState<Producto[]>([]),[items,setItems]=useState<Item[]>([]);\n   type Pago={id:number;monto:number;metodo_pago:string;notas:string|null;created_at:string};\n   const [pagos,setPagos]=useState<Pago[]>([]),[montoPago,setMontoPago]=useState(""),[metodoPago,setMetodoPago]=useState("EFECTIVO"),[notasPago,setNotasPago]=useState("");
+  const [productos,setProductos]=useState<Producto[]>([]),[items,setItems]=useState<Item[]>([]);
+   type Pago={id:number;monto:number;metodo_pago:string;notas:string|null;created_at:string};
+   const [pagos,setPagos]=useState<Pago[]>([]),[montoPago,setMontoPago]=useState(""),[metodoPago,setMetodoPago]=useState("EFECTIVO"),[notasPago,setNotasPago]=useState("");
   const [productoId,setProductoId]=useState(""),[cantidad,setCantidad]=useState("1"),[precioVenta,setPrecioVenta]=useState(""),[busqueda,setBusqueda]=useState("");
   const [manoObra,setManoObra]=useState(""),[seccion,setSeccion]=useState<"diagnostico"|"presupuesto"|"reparacion">("diagnostico"),[cargando,setCargando]=useState(true),[guardando,setGuardando]=useState(false),[error,setError]=useState(""),[mensaje,setMensaje]=useState("");
 
@@ -52,7 +54,9 @@ export default function ReparacionDetallePage(){
     const cliente=Array.isArray(data.clientes)?data.clientes[0]||null:data.clientes||null; const equipo=Array.isArray(data.equipos)?data.equipos[0]||null:data.equipos||null;
     setOrden({...data,cliente,equipo} as Orden);
      const obs=data.observaciones||"";
-     const dm=obs.match(/Diagnóstico:\s*([\s\S]*?)(?:\n\nNotas técnicas:|$)/i);
+     const dm=obs.match(/Diagnóstico:\s*([\s\S]*?)(?:
+
+Notas técnicas:|$)/i);
      const nm=obs.match(/Notas técnicas:\s*([\s\S]*)$/i);
      setDiagnostico(dm?.[1]?.trim()||""); setNotas(nm?.[1]?.trim()||(dm?"":obs));
      setManoObra(data.presupuesto_mano_obra!=null?String(data.presupuesto_mano_obra):""); setContrasenaEquipo(data.contrasena_equipo||"");
@@ -82,8 +86,12 @@ export default function ReparacionDetallePage(){
      if(!orden)return;
      setGuardando(true); setError("");
      let observaciones="";
-     if(diagnostico.trim()) observaciones=`Diagnóstico:\n${diagnostico.trim()}`;
-     if(notas.trim()) observaciones+=(observaciones?"\n\n":"")+`Notas técnicas:\n${notas.trim()}`;
+     if(diagnostico.trim()) observaciones=`Diagnóstico:
+${diagnostico.trim()}`;
+     if(notas.trim()) observaciones+=(observaciones?"
+
+":"")+`Notas técnicas:
+${notas.trim()}`;
      const{error:e}=await supabase.from("ordenes_reparacion").update({observaciones,contrasena_equipo:contrasenaEquipo.trim()||null}).eq("id",orden.id);
      if(e)setError(e.message); else { setOrden({...orden,observaciones,contrasena_equipo:contrasenaEquipo.trim()||null}); await supabase.rpc("registrar_historial_reparacion",{p_orden_id:orden.id,p_tipo:"NOTA",p_estado_anterior:orden.estado,p_estado_nuevo:orden.estado,p_descripcion:"Se actualizaron diagnóstico, notas técnicas o contraseña del equipo."}); setMensaje("Diagnóstico, notas y contraseña guardados."); }
      setGuardando(false);
