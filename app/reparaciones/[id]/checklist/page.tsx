@@ -443,7 +443,7 @@ export default function ChecklistPage() {
       } = await supabase
         .from("ordenes_reparacion")
         .select(
-          "checklist_completado, checklist_fecha, equipo_id, equipos(marca)"
+          "checklist_completado, checklist_fecha, equipo_id"
         )
         .eq("id", ordenIdNumero)
         .maybeSingle();
@@ -458,12 +458,26 @@ export default function ChecklistPage() {
         orden?.checklist_completado === true
       );
 
-      const marcaEquipo = Array.isArray(orden?.equipos)
-        ? orden.equipos[0]?.marca
-        : orden?.equipos?.marca;
+      let marcaEquipo = "";
+
+      if (orden?.equipo_id) {
+        const { data: equipoData, error: equipoError } = await supabase
+          .from("equipos")
+          .select("marca")
+          .eq("id", orden.equipo_id)
+          .maybeSingle();
+
+        if (equipoError) {
+          throw new Error(
+            `Error cargando equipo: ${equipoError.message}`
+          );
+        }
+
+        marcaEquipo = String(equipoData?.marca ?? "");
+      }
 
       setEsApple(
-        String(marcaEquipo ?? "").trim().toLowerCase() === "apple"
+        marcaEquipo.trim().toLowerCase() === "apple"
       );
 
       /*
