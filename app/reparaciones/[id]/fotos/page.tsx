@@ -277,6 +277,9 @@ export default function ChecklistPage() {
   const [mensaje, setMensaje] =
     useState("");
 
+  const [qrAbierto, setQrAbierto] = useState(false);
+  const [qrUrl, setQrUrl] = useState("");
+
   const [bloqueado, setBloqueado] =
     useState(false);
 
