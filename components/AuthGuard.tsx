@@ -7,14 +7,14 @@ import { Loader2 } from "lucide-react";
 
 export default function AuthGuard({children}:{children:ReactNode}){
  const pathname=usePathname(),router=useRouter();
- const [ok,setOk]=useState(false);
- useEffect(()=>{let vivo=true;
+ const [ok,setOk]=useState(pathname==="/login");
+ useEffect(()=>{if(pathname==="/login"){setOk(true);return} let vivo=true;
   async function validar(){
    const {data:{session}}=await supabase.auth.getSession();
-   if(!session){router.replace("/login");return;}
+   if(!session){router.replace("/login");return}
    const {data,error}=await supabase.from("perfiles").select("rol,activo").eq("id",session.user.id).maybeSingle();
-   if(error||!data?.activo){await supabase.auth.signOut();router.replace("/login");return;}
-   if(!puedeAcceder(data.rol as RolUsuario,pathname)){router.replace("/");return;}
+   if(error||!data?.activo){await supabase.auth.signOut();router.replace("/login");return}
+   if(!puedeAcceder(data.rol as RolUsuario,pathname)){router.replace("/");return}
    if(vivo)setOk(true);
   }
   validar();
