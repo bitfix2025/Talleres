@@ -244,7 +244,7 @@ export default function NuevaReparacionPage() {
                     <input value={color} onChange={e=>setColor(e.target.value)} placeholder="Color" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/>
                     <select value={capacidad} onChange={e=>setCapacidad(e.target.value)} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"><option value="">Capacidad</option><option>64 GB</option><option>128 GB</option><option>256 GB</option><option>512 GB</option><option>1 TB</option><option>2 TB</option></select>
                     <input type="number" min="0" max="100" value={bateria} onChange={e=>setBateria(e.target.value)} placeholder="Salud de batería %" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/>
-                  </div>}
+                   </div></div>}
                 </div>
               )}
             </section>
