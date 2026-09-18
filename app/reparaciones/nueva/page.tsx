@@ -223,8 +223,19 @@ export default function NuevaReparacionPage() {
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-green-200 bg-green-50/50 p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-green-700"><UserRound size={19}/></div><div><p className="font-bold">{clienteSeleccionado?.nombre || "Nuevo cliente"}</p><p className="text-xs text-gray-500">DNI: {clienteSeleccionado?.dni || clienteDni || "Sin DNI"} · {clienteSeleccionado?.telefono || clienteTelefono || "Sin teléfono"}</p></div></div><button onClick={() => {setClienteSeleccionado(null);setModoNuevoCliente(false);setModoNuevoEquipo(false);setEquipoSeleccionado(null);setEquipos([])}} className="text-xs font-bold text-gray-500 hover:text-green-700">Cambiar</button></div>
-
+                  {modoNuevoCliente ? (
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <input value={clienteNombre} onChange={e=>setClienteNombre(e.target.value)} placeholder="Nombre y apellido *" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/>
+                      <input value={clienteDni} onChange={e=>setClienteDni(e.target.value)} placeholder="DNI" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/>
+                      <input value={clienteTelefono} onChange={e=>setClienteTelefono(e.target.value)} placeholder="Teléfono" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-green-500"/>
+                      <p className="md:col-span-3 text-xs text-gray-500">Completá los datos del cliente. Se guardarán al crear la reparación.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-green-700"><UserRound size={19}/></div><div><p className="font-bold">{clienteSeleccionado?.nombre || "Nuevo cliente"}</p><p className="text-xs text-gray-500">DNI: {clienteSeleccionado?.dni || clienteDni || "Sin DNI"} · {clienteSeleccionado?.telefono || clienteTelefono || "Sin teléfono"}</p></div></div>
+                      <button onClick={() => {setClienteSeleccionado(null);setModoNuevoCliente(false);setModoNuevoEquipo(false);setEquipoSeleccionado(null);setEquipos([])}} className="text-xs font-bold text-gray-500 hover:text-green-700">Cambiar</button>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
@@ -243,8 +254,7 @@ export default function NuevaReparacionPage() {
                     <input value={imei} onChange={e=>setImei(e.target.value)} placeholder="IMEI" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/>
                     <input value={numeroSerie} onChange={e=>setNumeroSerie(e.target.value)} placeholder="Número de serie" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/>
                     <input value={color} onChange={e=>setColor(e.target.value)} placeholder="Color" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/>
-                    <select value={capacidad} onChange={e=>setCapacidad(e.target.value)} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"><option value="">Capacidad</option><option>64 GB</option><option>128 GB</option><option>256 GB</option><option>512 GB</option><option>1 TB</option><option>2 TB</option></select>
-                     {tipoEquipo === "APPLE" && <><select value={capacidad} onChange={e=>setCapacidad(e.target.value)} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"><option value="">Capacidad</option><option>64 GB</option><option>128 GB</option><option>256 GB</option><option>512 GB</option><option>1 TB</option><option>2 TB</option></select><input type="number" min="0" max="100" value={bateria} onChange={e=>setBateria(e.target.value)} placeholder="Salud de batería %" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/></>}
+                    {tipoEquipo === "APPLE" && <><select value={capacidad} onChange={e=>setCapacidad(e.target.value)} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none"><option value="">Capacidad</option><option>64 GB</option><option>128 GB</option><option>256 GB</option><option>512 GB</option><option>1 TB</option><option>2 TB</option></select><input type="number" min="0" max="100" value={bateria} onChange={e=>setBateria(e.target.value)} placeholder="Salud de batería %" className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-green-500 focus:bg-white"/></>}
                    </div></div>}
                 </div>
               )}
