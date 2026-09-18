@@ -88,12 +88,8 @@ export default function ReparacionDetallePage(){
      if(!orden)return;
      setGuardando(true); setError("");
      let observaciones="";
-     if(diagnostico.trim()) observaciones=`Diagnóstico:
-${diagnostico.trim()}`;
-     if(notas.trim()) observaciones+=(observaciones?"
-
-":"")+`Notas técnicas:
-${notas.trim()}`;
+     if(diagnostico.trim()) observaciones=`Diagnóstico:\n${diagnostico.trim()}`;
+     if(notas.trim()) observaciones+=(observaciones?"\n\n":"")+`Notas técnicas:\n${notas.trim()}`;
      const{error:e}=await supabase.from("ordenes_reparacion").update({observaciones,contrasena_equipo:contrasenaEquipo.trim()||null}).eq("id",orden.id);
      if(e)setError(e.message); else { setOrden({...orden,observaciones,contrasena_equipo:contrasenaEquipo.trim()||null}); await supabase.rpc("registrar_historial_reparacion",{p_orden_id:orden.id,p_tipo:"NOTA",p_estado_anterior:orden.estado,p_estado_nuevo:orden.estado,p_descripcion:"Se actualizaron diagnóstico, notas técnicas o contraseña del equipo."}); setMensaje("Diagnóstico, notas y contraseña guardados."); }
      setGuardando(false);
@@ -103,7 +99,7 @@ ${notas.trim()}`;
   const eliminarRepuesto=async(id:number)=>{setGuardando(true);setError("");const{error:e}=await supabase.from("presupuesto_reparacion_items").delete().eq("id",id);if(e)setError(e.message);else setMensaje("Repuesto eliminado.");await cargar();setGuardando(false);};
   const guardarPresupuesto=async(enviar:boolean)=>{if(!orden)return;const mano=Math.max(0,Number(manoObra)||0);if(items.length===0&&mano<=0)return setError("Agregá al menos un repuesto o una mano de obra.");setGuardando(true);setError("");const{error:e}=await supabase.from("ordenes_reparacion").update({presupuesto_mano_obra:mano,estado:enviar?"ESPERANDO APROBACIÓN":"PRESUPUESTADO"}).eq("id",orden.id);if(e)setError(`No se pudo guardar el presupuesto: ${e.message}`);else{setOrden({...orden,presupuesto_mano_obra:mano,estado:enviar?"ESPERANDO APROBACIÓN":"PRESUPUESTADO"});setMensaje(enviar?"Presupuesto enviado a aprobación.":"Presupuesto guardado correctamente.");}setGuardando(false);};
 
-  const consumirRepuestosYComenzar=async()=>{if(!orden||guardando)return;setGuardando(true);setError("");setMensaje("");try{const{data:usados,error:ue}=await supabase.from("reparacion_repuestos").select("producto_id,cantidad").eq("orden_id",orden.id);if(ue)throw new Error(ue.message);const usadosMap=new Map<number,number>();for(const u of usados||[]){usadosMap.set(Number(u.producto_id),(usadosMap.get(Number(u.producto_id))||0)+Number(u.cantidad||0));}for(const item of items){const ya=usadosMap.get(item.producto_id)||0;const falta=Number(item.cantidad||0)-ya;if(falta<=0)continue;const{error:e}=await supabase.rpc("usar_repuesto_reparacion",{p_orden_id:orden.id,p_producto_id:item.producto_id,p_cantidad:falta});if(e)throw new Error(e.message);}const{error:se}=await supabase.from("ordenes_reparacion").update({estado:"EN REPARACIÓN"}).eq("id",orden.id);if(se)throw new Error(se.message);setOrden({...orden,estado:"EN REPARACIÓN"});setMensaje("Repuestos registrados y descontados del inventario. La reparación comenzó.");await cargar();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setGuardando(false);}};
+  const consumirRepuestosYComenzar=async()=>{if(!orden||guardando)return;setGuardando(true);setError("");setMensaje("");try{const{data:usados,error:ue}=await supabase.from("reparacion_repuestos").select("producto_id,cantidad").eq("orden_id",orden.id);if(ue)throw new Error(ue.message);const usadosMap=new Map<number,number>();for(const u of usados||[]){usadosMap.set(Number(u.producto_id),(usadosMap.get(Number(u.producto_id))||0)+Number(u.cantidad||0));}for(const item of items){const ya=usadosMap.get(item.producto_id)||0;const falta=Number(item.cantidad||0)-ya;if(falta<=0)continue;const{error:e}=await supabase.rpc("usar_repuesto_reparacion",{p_orden_id:orden.id,p_producto_id:item.producto_id,p_cantidad:falta});if(e)throw new Error(e.message);}const{error:se}=await supabase.from("ordenes_reparacion").update({estado:"EN REPARACIÓN"}).eq("id",orden.id);if(se)throw new Error(se.message);setOrden({...orden,estado:"EN REPARACIÓN"});setMensaje("Repuestos registrados y descontados del inventario.\nLa reparación comenzó.");await cargar();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setGuardando(false);}};
 
   const totalRepuestos=items.reduce((s,i)=>s+Number(i.cantidad||0)*Number(i.precio_unitario||0),0),total=totalRepuestos+(Number(manoObra)||0);
   const totalPagado=pagos.reduce((s,p)=>s+Number(p.monto||0),0),saldo=Math.max(0,total-totalPagado);
