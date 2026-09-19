@@ -42,7 +42,6 @@ export default function RepuestosReparacionPage(){
 
   const agregarRepuesto=async()=>{
     scrollPendiente.current=window.scrollY;
-    (document.activeElement as HTMLElement|null)?.blur();
     setError("");setMensaje("");
     const p=productos.find(x=>x.id===Number(productoId)); console.log("PRODUCTO SELECCIONADO:", p); const q=Number(cantidad); const precio=Number(precioVenta);
     if(!p){setError("Seleccioná un repuesto del inventario.");return;}
@@ -73,9 +72,11 @@ export default function RepuestosReparacionPage(){
         setItems(prev=>[...prev,{...(r.data as Omit<Item,"producto">),producto:p}]);
       }
       setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
-      setTimeout(()=>{
-        if(scrollPendiente.current!==null){ window.scrollTo(0,scrollPendiente.current); }
-      },100);
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          if(scrollPendiente.current!==null) window.scrollTo({top:scrollPendiente.current,left:0,behavior:"instant"});
+        });
+      });
     }catch(e){setError(`No se pudo guardar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
     finally{setGuardando(false);}
   };
