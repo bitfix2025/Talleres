@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Boxes, CheckCircle2, Home, Loader2, Plus, Trash2 } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
@@ -42,6 +42,7 @@ export default function RepuestosReparacionPage(){
 
   const agregarRepuesto=async()=>{
     scrollPendiente.current=window.scrollY;
+    restaurarScroll.current=true;
     setError("");setMensaje("");
     const p=productos.find(x=>x.id===Number(productoId)); console.log("PRODUCTO SELECCIONADO:", p); const q=Number(cantidad); const precio=Number(precioVenta);
     if(!p){setError("Seleccioná un repuesto del inventario.");return;}
@@ -72,14 +73,18 @@ export default function RepuestosReparacionPage(){
         setItems(prev=>[...prev,{...(r.data as Omit<Item,"producto">),producto:p}]);
       }
       setProductoId("");setCantidad("1");setPrecioVenta("");setBusqueda("");
-      requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-          if(scrollPendiente.current!==null) window.scrollTo({top:scrollPendiente.current,left:0,behavior:"instant"});
-        });
-      });
+
     }catch(e){setError(`No se pudo guardar el repuesto: ${e instanceof Error?e.message:String(e)}`);}
     finally{setGuardando(false);}
   };
+
+  useLayoutEffect(()=>{
+    if(!restaurarScroll.current || scrollPendiente.current===null) return;
+    const y=scrollPendiente.current;
+    restaurarScroll.current=false;
+    window.scrollTo(0,y);
+    requestAnimationFrame(()=>window.scrollTo(0,y));
+  },[items]);
 
   const eliminarRepuesto=async(id:number)=>{setGuardando(true);setError("");const r=await supabase.from("presupuesto_reparacion_items").delete().eq("id",id);if(r.error)setError(`No se pudo eliminar el repuesto: ${r.error.message}`);else{setItems(prev=>prev.filter(x=>x.id!==id));setMensaje("Repuesto eliminado del presupuesto.");}setGuardando(false);};
   return <main className="min-h-screen bg-[#f5f6f8] text-gray-900"><div className="mx-auto max-w-6xl p-5 md:p-8">
