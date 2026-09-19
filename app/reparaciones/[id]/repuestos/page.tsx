@@ -18,6 +18,7 @@ export default function RepuestosReparacionPage(){
   const [productoId,setProductoId]=useState(""),[cantidad,setCantidad]=useState("1"),[precioVenta,setPrecioVenta]=useState(""),[busqueda,setBusqueda]=useState("");
   const [cargando,setCargando]=useState(true),[guardando,setGuardando]=useState(false),[error,setError]=useState(""),[mensaje,setMensaje]=useState("");
   const scrollPendiente=useRef<number|null>(null);
+  const restaurarScroll=useRef(false);
 
   const cargar=async()=>{
     setCargando(true); setError("");
