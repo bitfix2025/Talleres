@@ -60,7 +60,7 @@ export default function ClientesPage() {
       <div className="mx-auto max-w-[1480px]">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div><p className="text-xs font-black uppercase tracking-[0.2em] text-[#16a34a]">Gestión</p><h1 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">Clientes</h1><p className="mt-2 text-sm text-gray-500">Clientes, equipos e historial de reparaciones en un solo lugar.</p></div>
-          <div className="flex gap-2"><button onClick={() => setMostrarNuevo(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#16a34a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#15803d]"><Plus size={18}/> Nuevo cliente</button><button onClick={() => router.push("/reparaciones/nueva")} className="hidden md:inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700"><Plus size={18}/> Nueva reparación</button></div>
+          <div className="flex gap-2"><button onClick={() => setMostrarNuevo(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#16a34a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#15803d]"><Plus size={18}/> Nuevo cliente</button></div>
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -89,6 +89,17 @@ export default function ClientesPage() {
           })}</div>}
         </section>
       </div>
+      {mostrarNuevo && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+          <h2 className="text-xl font-black">Nuevo cliente</h2>
+          <div className="mt-5 grid gap-4">
+            <input value={nuevo.nombre} onChange={e=>setNuevo({...nuevo,nombre:e.target.value})} placeholder="Nombre completo *" className="h-12 rounded-xl border border-gray-200 px-4"/>
+            <input value={nuevo.dni} onChange={e=>setNuevo({...nuevo,dni:e.target.value})} placeholder="DNI" className="h-12 rounded-xl border border-gray-200 px-4"/>
+            <input value={nuevo.telefono} onChange={e=>setNuevo({...nuevo,telefono:e.target.value})} placeholder="Teléfono / WhatsApp" className="h-12 rounded-xl border border-gray-200 px-4"/>
+          </div>
+          <div className="mt-6 flex justify-end gap-2"><button type="button" onClick={()=>setMostrarNuevo(false)} className="rounded-xl px-4 py-3 font-bold text-gray-500">Cancelar</button><button type="button" disabled={guardandoNuevo} onClick={crearCliente} className="rounded-xl bg-[#16a34a] px-5 py-3 font-bold text-white disabled:opacity-60">{guardandoNuevo?"Guardando...":"Guardar cliente"}</button></div>
+        </div>
+      </div>}
     </main>
   );
 }
