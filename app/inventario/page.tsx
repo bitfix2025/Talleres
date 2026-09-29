@@ -2134,10 +2134,12 @@ export default function InventarioPage() {
                 </select>
               </div>
 
-              {nuevo.categoria === "Equipos" ? (
+              <Field label="Nombre *" value={nuevo.nombre} onChange={(v) => setNuevo({ ...nuevo, nombre: v })} placeholder="Ej. iPhone 13 Pro 256GB" />
+
+              {nuevo.categoria === "Equipos" && (
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-gray-600">Modelo</label>
-                  <select value={nuevo.modelo} onChange={(e) => setNuevo({ ...nuevo, modelo: e.target.value, nombre: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
+                  <select value={nuevo.modelo} onChange={(e) => setNuevo({ ...nuevo, modelo: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
                     <option value="">Seleccionar modelo de iPhone</option>
                     <option value="iPhone 11">iPhone 11</option>
                     <option value="iPhone 11 Pro">iPhone 11 Pro</option>
@@ -2170,11 +2172,17 @@ export default function InventarioPage() {
                     <option value="iPhone 17e">iPhone 17e</option>
                   </select>
                 </div>
-              ) : (
-                <Field label="Nombre *" value={nuevo.nombre} onChange={(v) => setNuevo({ ...nuevo, nombre: v })} placeholder="Nombre del producto" />
               )}
 
-              <Field label="Nombre *" value={nuevo.nombre} onChange={(v) => setNuevo({ ...nuevo, nombre: v })} placeholder="Ej. iPhone 13 Pro 256GB" />
+              <div className="sm:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <label className="mb-2 block text-xs font-bold text-gray-600">Foto del equipo / producto</label>
+                <input type="file" accept="image/*" onChange={seleccionarFoto} className="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm" />
+                {vistaPrevia ? (
+                  <img src={vistaPrevia} alt="Vista previa" className="mt-3 h-40 w-40 rounded-xl object-cover border border-gray-200" />
+                ) : (
+                  <p className="mt-2 text-xs text-gray-400">Seleccioná una foto para verla aquí.</p>
+                )}
+              </div>
 
               {nuevo.categoria === "Equipos" && (
                 <>
@@ -2187,13 +2195,7 @@ export default function InventarioPage() {
                     <select value={nuevo.condicionEquipo} onChange={(e) => setNuevo({ ...nuevo, condicionEquipo: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
                       <option value="USADO">Usado</option><option value="NUEVO">Nuevo</option>
                     </select>
-                  <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-xs font-bold text-gray-600">Foto del producto</label>
-              <input type="file" accept="image/*" onChange={seleccionarFoto} className="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm" />
-              {vistaPrevia && <img src={vistaPrevia} alt="Vista previa del producto" className="mt-3 h-32 w-32 rounded-xl object-cover border border-gray-200" />}
-            </div>
-
-            </div>
+                  </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-gray-600">Estado físico</label>
                     <select value={nuevo.estadoFisico} onChange={(e) => setNuevo({ ...nuevo, estadoFisico: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
@@ -2210,12 +2212,6 @@ export default function InventarioPage() {
               <Field label="Stock mínimo" type="number" min="0" step="1" value={nuevo.stockMinimo} onChange={(v) => setNuevo({ ...nuevo, stockMinimo: v })} placeholder="0" />
             </div>
 
-            {nuevo.categoria === "Equipos" && (
-              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
-                El código de barras se genera automáticamente al guardar el equipo y se podrá imprimir en su etiqueta.
-              </div>
-            )}
-
             <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
               <button type="button" onClick={cerrarNuevo} className="rounded-xl px-4 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100">Cancelar</button>
               <button disabled={guardandoProducto} type="submit" className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
@@ -2226,6 +2222,7 @@ export default function InventarioPage() {
           </form>
         </Modal>
       )}
+
     </main>
   );
 }
