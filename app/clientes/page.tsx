@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Search, Plus, Users, Phone, Smartphone, ChevronRight, UserRound } from "lucide-react";
+import { ArrowLeft, Search, Plus, Users, Phone, Smartphone, ChevronRight, UserRound, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type Cliente = { id: string; nombre: string; dni?: string | null; telefono?: string | null };
@@ -17,6 +17,9 @@ export default function ClientesPage() {
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [nuevo, setNuevo] = useState({ nombre: "", dni: "", telefono: "" });
+  const [mostrarNuevo, setMostrarNuevo] = useState(false);
+  const [guardandoNuevo, setGuardandoNuevo] = useState(false);
 
   useEffect(() => {
     const cargar = async () => {
@@ -43,12 +46,21 @@ export default function ClientesPage() {
     return q ? clientes.filter(c => `${c.nombre} ${c.dni || ""} ${c.telefono || ""}`.toLowerCase().includes(q)) : clientes;
   }, [clientes, busqueda]);
 
+  const crearCliente = async () => {
+    if (!nuevo.nombre.trim()) { setError("Ingresá el nombre del cliente."); return; }
+    setGuardandoNuevo(true); setError("");
+    const r = await supabase.from("clientes").insert({ taller_id: 1, nombre: nuevo.nombre.trim(), dni: nuevo.dni.trim() || null, telefono: nuevo.telefono.trim() || null }).select("id,nombre,dni,telefono").single();
+    if (r.error) setError(`No se pudo crear el cliente: ${r.error.message}`);
+    else { setClientes(prev => [...prev, r.data as Cliente].sort((a,b)=>a.nombre.localeCompare(b.nombre))); setNuevo({nombre:"",dni:"",telefono:""}); setMostrarNuevo(false); }
+    setGuardandoNuevo(false);
+  };
+
   return (
     <main className="min-h-screen bg-[#f7f8f7] px-4 py-5 text-gray-900 md:px-7 md:py-7"><button type="button" onClick={()=>router.back()} className="mb-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"><ArrowLeft size={16}/> Volver</button>
       <div className="mx-auto max-w-[1480px]">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div><p className="text-xs font-black uppercase tracking-[0.2em] text-[#16a34a]">Gestión</p><h1 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">Clientes</h1><p className="mt-2 text-sm text-gray-500">Clientes, equipos e historial de reparaciones en un solo lugar.</p></div>
-          <button onClick={() => router.push("/reparaciones/nueva")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#16a34a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#15803d]"><Plus size={18}/> Nueva reparación</button>
+          <div className="flex gap-2"><button onClick={() => setMostrarNuevo(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#16a34a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#15803d]"><Plus size={18}/> Nuevo cliente</button><button onClick={() => router.push("/reparaciones/nueva")} className="hidden md:inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700"><Plus size={18}/> Nueva reparación</button></div>
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
