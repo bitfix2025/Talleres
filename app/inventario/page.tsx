@@ -515,8 +515,6 @@ export default function InventarioPage() {
             nuevo.modelo.trim() || null,
           sku:
             nuevo.sku.trim() || null,
-          codigo_barras:
-            nuevo.codigoBarras.trim() || null,
           descripcion:
             nuevo.descripcion.trim() || null,
           image_url: imageUrl,
