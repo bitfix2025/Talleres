@@ -615,6 +615,30 @@ export default function InventarioPage() {
     );
   };
 
+  const imprimirEtiqueta = (producto: Producto) => {
+    if (!producto.codigo_barras) {
+      mostrarMensaje("Este equipo todavía no tiene código de barras.");
+      return;
+    }
+    const ventana = window.open("", "_blank", "width=520,height=420");
+    if (!ventana) return;
+    ventana.document.write(`<!doctype html><html><head><title>Etiqueta ${producto.codigo_barras}</title>
+      <style>
+        @page{size:58mm 35mm;margin:0}body{margin:0;font-family:Arial,sans-serif}
+        .label{width:58mm;height:35mm;box-sizing:border-box;padding:3mm;text-align:center;display:flex;flex-direction:column;justify-content:center}
+        .brand{font-size:9px;font-weight:800;letter-spacing:2px}.model{font-size:12px;font-weight:800;margin:2mm 0}
+        #barcode{width:50mm;height:12mm}.code{font-size:9px;font-weight:700;letter-spacing:1px;margin-top:1mm}
+      </style></head><body><div class="label">
+      <div class="brand">BITFIX</div>
+      <div class="model">${producto.nombre || producto.modelo || "Equipo"}</div>
+      <svg id="barcode"></svg><div class="code">${producto.codigo_barras}</div>
+      </div>
+      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+      <script>window.onload=function(){JsBarcode("#barcode","${producto.codigo_barras}",{format:"CODE128",displayValue:false,height:38,width:1.5,margin:0});setTimeout(function(){window.print();},400)}</script>
+      </body></html>`);
+    ventana.document.close();
+  };
+
   /* =====================================================
      EDITAR PRODUCTO
      INCLUYE CAMBIO DE FOTO
@@ -1842,6 +1866,22 @@ export default function InventarioPage() {
               </div>
 
               <div className="border-t border-gray-100 pt-4">
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (productoSeleccionado) imprimirEtiqueta(productoSeleccionado);
+                  }}
+                  className="flex items-center gap-3 rounded-2xl border border-[#bcebd5] bg-[#e9f8f1] p-4 text-left transition hover:bg-[#dff5ea]"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#148f5c]">
+                    <Package size={19} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-gray-900">Imprimir etiqueta</p>
+                    <p className="mt-0.5 text-xs text-gray-400">Etiqueta con código de barras</p>
+                  </div>
+                </button>
 
                 <button
                   type="button"
