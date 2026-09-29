@@ -590,6 +590,12 @@ export default function InventarioPage() {
       stock: "0",
       stockMinimo: "0",
       descripcion: "",
+      imei: "",
+      numeroSerie: "",
+      saludBateria: "",
+      condicionEquipo: "USADO",
+      estadoFisico: "A",
+      garantiaDias: "60",
     });
 
     setGuardandoProducto(false);
@@ -2950,6 +2956,7 @@ function Field({
   placeholder?: string;
   type?: string;
   min?: string;
+  max?: string;
   step?: string;
 }) {
   return (
@@ -2962,6 +2969,7 @@ function Field({
       <input
         type={type}
         min={min}
+        max={max}
         step={step}
         value={value}
         onChange={(event) =>
