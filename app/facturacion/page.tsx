@@ -8,7 +8,7 @@ const TALLER_ID=1;
 const money=(n:number)=>new Intl.NumberFormat("es-AR",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(Number(n)||0);
 type Cliente={id:number;nombre:string;telefono:string|null};
 type Movimiento={id:number;tipo:"INGRESO"|"EGRESO";medio:string;monto:number;concepto:string;created_at:string};
-type Cuenta={id:number;cliente_id:number;tipo:"CARGO"|"PAGO";monto:number;concepto:string;medio:string|null;created_at:string;cliente?:{nombre:string}|null};
+type Cuenta={id:number;cliente_id:number;tipo:"CARGO"|"PAGO";monto:number;concepto:string;medio:string|null;created_at:string;cliente?:{nombre:string}|{nombre:string}[]|null};
 
 export default function FacturacionPage(){
  const router=useRouter();
@@ -36,7 +36,7 @@ export default function FacturacionPage(){
  useEffect(()=>{cargar()},[]);
  const caja=useMemo(()=>({ef:mov.filter(x=>x.medio==="EFECTIVO").reduce((s,x)=>s+(x.tipo==="INGRESO"?1:-1)*Number(x.monto),0), banco:mov.filter(x=>x.medio==="BANCO").reduce((s,x)=>s+(x.tipo==="INGRESO"?1:-1)*Number(x.monto),0), mp:mov.filter(x=>x.medio==="MERCADO_PAGO").reduce((s,x)=>s+(x.tipo==="INGRESO"?1:-1)*Number(x.monto),0)}),[mov]);
  const disponible=caja.ef+caja.banco+caja.mp;
- const deudas=useMemo(()=>{const m=new Map<number,{nombre:string;debe:number}>();cuentas.forEach(x=>{const id=x.cliente_id;const nombre=x.cliente?.nombre||"Cliente";const z=m.get(id)||{nombre,debe:0};z.debe+=x.tipo==="CARGO"?Number(x.monto):-Number(x.monto);m.set(id,z)});return [...m.entries()].map(([id,v])=>({id,...v})).filter(x=>x.debe>0.009).sort((a,b)=>b.debe-a.debe)},[cuentas]);
+ const deudas=useMemo(()=>{const m=new Map<number,{nombre:string;debe:number}>();cuentas.forEach(x=>{const id=x.cliente_id;const nombre=Array.isArray(x.cliente)?(x.cliente[0]?.nombre||"Cliente"):(x.cliente?.nombre||"Cliente");const z=m.get(id)||{nombre,debe:0};z.debe+=x.tipo==="CARGO"?Number(x.monto):-Number(x.monto);m.set(id,z)});return [...m.entries()].map(([id,v])=>({id,...v})).filter(x=>x.debe>0.009).sort((a,b)=>b.debe-a.debe)},[cuentas]);
  const guardarMov=async()=>{const monto=Number(form.monto);if(!monto||!form.concepto.trim()){setError("Completá monto y concepto.");return}const {error:e}=await supabase.from("movimientos_caja").insert({taller_id:TALLER_ID,tipo:form.tipo,medio:form.medio,monto,concepto:form.concepto.trim(),cliente_id:form.clienteId?Number(form.clienteId):null});if(e){setError(e.message);return}setModal(null);setForm({tipo:"INGRESO",medio:"EFECTIVO",monto:"",concepto:"",clienteId:""});cargar()};
  const guardarCuenta=async()=>{const monto=Number(form.monto);if(!form.clienteId||!monto||!form.concepto.trim()){setError("Seleccioná cliente y completá monto y concepto.");return}const {error:e}=await supabase.from("cuentas_corrientes").insert({taller_id:TALLER_ID,cliente_id:Number(form.clienteId),tipo:form.tipo==="INGRESO"?"PAGO":"CARGO",monto,concepto:form.concepto.trim(),medio:form.tipo==="INGRESO"?form.medio:null});if(e){setError(e.message);return}if(form.tipo==="INGRESO"){const ce=await supabase.from("movimientos_caja").insert({taller_id:TALLER_ID,tipo:"INGRESO",medio:form.medio,monto,concepto:"Pago cuenta corriente: "+form.concepto.trim(),cliente_id:Number(form.clienteId)});if(ce.error){setError(ce.error.message);return}}setModal(null);setForm({tipo:"INGRESO",medio:"EFECTIVO",monto:"",concepto:"",clienteId:""});cargar()};
  if(loading)return <main className="min-h-screen bg-[#f5f8f6] p-8 text-sm font-semibold text-gray-500">Cargando control financiero...</main>;
