@@ -2174,6 +2174,8 @@ export default function InventarioPage() {
                 <Field label="Nombre *" value={nuevo.nombre} onChange={(v) => setNuevo({ ...nuevo, nombre: v })} placeholder="Nombre del producto" />
               )}
 
+              <Field label="Nombre *" value={nuevo.nombre} onChange={(v) => setNuevo({ ...nuevo, nombre: v })} placeholder="Ej. iPhone 13 Pro 256GB" />
+
               {nuevo.categoria === "Equipos" && (
                 <>
                   <Field label="Capacidad" value={nuevo.descripcion} onChange={(v) => setNuevo({ ...nuevo, descripcion: v })} placeholder="Ej. 256 GB" />
@@ -2185,7 +2187,13 @@ export default function InventarioPage() {
                     <select value={nuevo.condicionEquipo} onChange={(e) => setNuevo({ ...nuevo, condicionEquipo: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
                       <option value="USADO">Usado</option><option value="NUEVO">Nuevo</option>
                     </select>
-                  </div>
+                  <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-xs font-bold text-gray-600">Foto del producto</label>
+              <input type="file" accept="image/*" onChange={seleccionarFoto} className="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm" />
+              {vistaPrevia && <img src={vistaPrevia} alt="Vista previa del producto" className="mt-3 h-32 w-32 rounded-xl object-cover border border-gray-200" />}
+            </div>
+
+            </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-gray-600">Estado físico</label>
                     <select value={nuevo.estadoFisico} onChange={(e) => setNuevo({ ...nuevo, estadoFisico: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
