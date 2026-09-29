@@ -129,7 +129,7 @@ export default function InventarioPage() {
 
   const [nuevo, setNuevo] = useState({
     nombre: "",
-    categoria: "",
+    categoria: "Equipos",
     marca: "",
     modelo: "",
     sku: "",
