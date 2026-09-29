@@ -1,69 +1,62 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, RefreshCw, TrendingUp, Wrench, ShoppingCart, DollarSign, CalendarDays, ReceiptText } from "lucide-react";
+import { ArrowLeft, RefreshCw, Wallet, Landmark, CreditCard, TrendingUp, TrendingDown, Users, Plus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-const TALLER_ID = 1;
-
-const money = (n:number) => new Intl.NumberFormat("es-AR",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(Number(n)||0);
-const day = (d:Date) => new Date(d.getFullYear(),d.getMonth(),d.getDate());
-const sameDay = (a:string,d:Date) => day(new Date(a)).getTime()===day(d).getTime();
-
-type Orden={id:number;estado:string|null;created_at:string;presupuesto_mano_obra:number|null};
-type Item={orden_id:number;cantidad:number;precio_unitario:number;costo_unitario:number};
-type Venta={id:number;total:number;ganancia:number;created_at:string;estado:string};
+const TALLER_ID=1;
+const money=(n:number)=>new Intl.NumberFormat("es-AR",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(Number(n)||0);
+type Cliente={id:number;nombre:string;telefono:string|null};
+type Movimiento={id:number;tipo:"INGRESO"|"EGRESO";medio:string;monto:number;concepto:string;created_at:string};
+type Cuenta={id:number;cliente_id:number;tipo:"CARGO"|"PAGO";monto:number;concepto:string;medio:string|null;created_at:string;cliente?:{nombre:string}|null};
 
 export default function FacturacionPage(){
  const router=useRouter();
- const [ordenes,setOrdenes]=useState<Orden[]>([]);
- const [items,setItems]=useState<Item[]>([]);
- const [ventas,setVentas]=useState<Venta[]>([]);
- const [loading,setLoading]=useState(true);
- const [error,setError]=useState("");
+ const [mov,setMov]=useState<Movimiento[]>([]);
+ const [cuentas,setCuentas]=useState<Cuenta[]>([]);
+ const [clientes,setClientes]=useState<Cliente[]>([]);
+ const [ventas,setVentas]=useState<any[]>([]);
+ const [ordenes,setOrdenes]=useState<any[]>([]);
+ const [loading,setLoading]=useState(true); const [error,setError]=useState("");
+ const [modal,setModal]=useState<"mov"|"cuenta"|null>(null);
+ const [form,setForm]=useState({tipo:"INGRESO",medio:"EFECTIVO",monto:"",concepto:"",clienteId:""});
  const cargar=async()=>{
   setLoading(true);setError("");
-  const [o,i,v]=await Promise.all([
-   supabase.from("ordenes_reparacion").select("id,estado,created_at,presupuesto_mano_obra").eq("taller_id",TALLER_ID).order("created_at",{ascending:false}),
-   supabase.from("presupuesto_reparacion_items").select("orden_id,cantidad,precio_unitario,costo_unitario"),
-   supabase.from("ventas").select("id,total,ganancia,created_at,estado").eq("taller_id",TALLER_ID).eq("estado","COMPLETADA").order("created_at",{ascending:false})
+  const [m,c,cl,v,o]=await Promise.all([
+   supabase.from("movimientos_caja").select("*").eq("taller_id",TALLER_ID).order("created_at",{ascending:false}),
+   supabase.from("cuentas_corrientes").select("id,cliente_id,tipo,monto,concepto,medio,created_at,cliente:clientes(nombre)").eq("taller_id",TALLER_ID).order("created_at",{ascending:false}),
+   supabase.from("clientes").select("id,nombre,telefono").eq("taller_id",TALLER_ID).order("nombre"),
+   supabase.from("ventas").select("id,total,ganancia,created_at,estado,metodo_pago").eq("taller_id",TALLER_ID).eq("estado","COMPLETADA").order("created_at",{ascending:false}),
+   supabase.from("ordenes_reparacion").select("id,estado,created_at,presupuesto_mano_obra").eq("taller_id",TALLER_ID)
   ]);
-  if(o.error||i.error||v.error) setError(o.error?.message||i.error?.message||v.error?.message||"No se pudieron cargar los datos.");
-  else {setOrdenes((o.data||[]) as Orden[]);setItems((i.data||[]) as Item[]);setVentas((v.data||[]) as Venta[]);}
+  const e=m.error||c.error||cl.error||v.error||o.error;
+  if(e)setError(e.message); else {setMov((m.data||[]) as Movimiento[]);setCuentas((c.data||[]) as Cuenta[]);setClientes((cl.data||[]) as Cliente[]);setVentas(v.data||[]);setOrdenes(o.data||[]);}
   setLoading(false);
  };
  useEffect(()=>{cargar()},[]);
- const reparacionesFacturadas=useMemo(()=>ordenes.filter(o=>o.estado==="ENTREGADO"),[ordenes]);
- const repTotal=(o:Orden)=>Number(o.presupuesto_mano_obra||0)+items.filter(i=>i.orden_id===o.id).reduce((s,i)=>s+Number(i.cantidad)*Number(i.precio_unitario),0);
- const repGanancia=(o:Orden)=>Number(o.presupuesto_mano_obra||0)+items.filter(i=>i.orden_id===o.id).reduce((s,i)=>s+Number(i.cantidad)*(Number(i.precio_unitario)-Number(i.costo_unitario)),0);
- const hoy=new Date();
- const repsHoy=reparacionesFacturadas.filter(o=>sameDay(o.created_at,hoy));
- const ventasHoy=ventas.filter(v=>sameDay(v.created_at,hoy));
- const factHoy=repsHoy.reduce((s,o)=>s+repTotal(o),0)+ventasHoy.reduce((s,v)=>s+Number(v.total),0);
- const ganHoy=repsHoy.reduce((s,o)=>s+repGanancia(o),0)+ventasHoy.reduce((s,v)=>s+Number(v.ganancia),0);
- const factMes=[...reparacionesFacturadas.filter(o=>{const d=new Date(o.created_at);return d.getMonth()===hoy.getMonth()&&d.getFullYear()===hoy.getFullYear()}),...[]].reduce((s,o)=>s+repTotal(o),0)+ventas.filter(v=>{const d=new Date(v.created_at);return d.getMonth()===hoy.getMonth()&&d.getFullYear()===hoy.getFullYear()}).reduce((s,v)=>s+Number(v.total),0);
- const ganMes=reparacionesFacturadas.filter(o=>{const d=new Date(o.created_at);return d.getMonth()===hoy.getMonth()&&d.getFullYear()===hoy.getFullYear()}).reduce((s,o)=>s+repGanancia(o),0)+ventas.filter(v=>{const d=new Date(v.created_at);return d.getMonth()===hoy.getMonth()&&d.getFullYear()===hoy.getFullYear()}).reduce((s,v)=>s+Number(v.ganancia),0);
- if(loading)return <main className="min-h-screen bg-[#f4f7f5] p-8 text-sm font-semibold text-gray-500">Cargando facturación...</main>;
- return <main className="min-h-screen bg-[#f6f8f7] p-4 text-[#17201b] md:p-8">
-  <div className="mx-auto max-w-7xl">
-   <header className="mb-6 rounded-3xl bg-[#123c2b] p-6 text-white shadow-xl">
-    <div className="flex flex-wrap items-center justify-between gap-5">
-     <div><div className="mb-2 flex items-center gap-2 text-sm font-bold text-emerald-200"><ReceiptText size={17}/> CONTROL FINANCIERO</div><h1 className="text-3xl font-black tracking-tight">Facturación</h1><p className="mt-1 max-w-xl text-sm text-emerald-50/75">Controlá ingresos y ganancias de reparaciones y ventas desde un solo lugar.</p></div>
-     <div className="flex gap-2"><button onClick={()=>router.push("/")} className="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold backdrop-blur hover:bg-white/20"><ArrowLeft size={16} className="mr-2 inline"/>Volver</button><button onClick={cargar} className="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#123c2b] hover:bg-emerald-50"><RefreshCw size={16} className="mr-2 inline"/>Actualizar</button></div>
-    </div>
-   </header>
-   {error&&<div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
-   <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-    <div className="rounded-2xl border bg-white p-5 shadow-sm"><div className="mb-5 flex items-center justify-between"><span className="text-sm font-bold text-gray-500">Facturado hoy</span><span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><DollarSign size={19}/></span></div><p className="text-3xl font-black">{money(factHoy)}</p><p className="mt-1 text-xs font-semibold text-gray-400">Ingresos del día</p></div>
-    <div className="rounded-2xl border bg-white p-5 shadow-sm"><div className="mb-5 flex items-center justify-between"><span className="text-sm font-bold text-gray-500">Ganancia hoy</span><span className="rounded-xl bg-blue-50 p-2.5 text-blue-700"><TrendingUp size={19}/></span></div><p className="text-3xl font-black">{money(ganHoy)}</p><p className="mt-1 text-xs font-semibold text-gray-400">Resultado del día</p></div>
-    <div className="rounded-2xl border bg-white p-5 shadow-sm"><div className="mb-5 flex items-center justify-between"><span className="text-sm font-bold text-gray-500">Facturado este mes</span><span className="rounded-xl bg-violet-50 p-2.5 text-violet-700"><CalendarDays size={19}/></span></div><p className="text-3xl font-black">{money(factMes)}</p><p className="mt-1 text-xs font-semibold text-gray-400">Acumulado mensual</p></div>
-    <div className="rounded-2xl border bg-white p-5 shadow-sm"><div className="mb-5 flex items-center justify-between"><span className="text-sm font-bold text-gray-500">Ganancia este mes</span><span className="rounded-xl bg-amber-50 p-2.5 text-amber-700"><TrendingUp size={19}/></span></div><p className="text-3xl font-black">{money(ganMes)}</p><p className="mt-1 text-xs font-semibold text-gray-400">Resultado mensual</p></div>
-   </div>
-   <div className="grid gap-5 lg:grid-cols-2">
-    <section className="overflow-hidden rounded-2xl border bg-white shadow-sm"><div className="border-b px-5 py-4"><h2 className="flex items-center gap-2 font-black"><Wrench size={18} className="text-emerald-600"/>Reparaciones facturadas</h2><p className="mt-1 text-xs text-gray-500">Órdenes que ya fueron entregadas.</p></div><div className="divide-y">{reparacionesFacturadas.slice(0,10).map(o=><div key={o.id} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50"><div><p className="text-sm font-bold">Orden #{o.id}</p><p className="text-xs text-gray-400">Reparación entregada</p></div><span className="font-black">{money(repTotal(o))}</span></div>)}{!reparacionesFacturadas.length&&<p className="py-10 text-center text-sm text-gray-400">Todavía no hay reparaciones entregadas.</p>}</div></section>
-    <section className="overflow-hidden rounded-2xl border bg-white shadow-sm"><div className="border-b px-5 py-4"><h2 className="flex items-center gap-2 font-black"><ShoppingCart size={18} className="text-blue-600"/>Ventas facturadas</h2><p className="mt-1 text-xs text-gray-500">Ventas con estado completada.</p></div><div className="divide-y">{ventas.slice(0,10).map(v=><div key={v.id} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50"><div><p className="text-sm font-bold">Venta #{v.id}</p><p className="text-xs text-emerald-600">Ganancia {money(v.ganancia)}</p></div><span className="font-black">{money(v.total)}</span></div>)}{!ventas.length&&<p className="py-10 text-center text-sm text-gray-400">Todavía no hay ventas.</p>}</div></section>
-   </div>
+ const caja=useMemo(()=>({ef:mov.filter(x=>x.medio==="EFECTIVO").reduce((s,x)=>s+(x.tipo==="INGRESO"?1:-1)*Number(x.monto),0), banco:mov.filter(x=>x.medio==="BANCO").reduce((s,x)=>s+(x.tipo==="INGRESO"?1:-1)*Number(x.monto),0), mp:mov.filter(x=>x.medio==="MERCADO_PAGO").reduce((s,x)=>s+(x.tipo==="INGRESO"?1:-1)*Number(x.monto),0)}),[mov]);
+ const disponible=caja.ef+caja.banco+caja.mp;
+ const deudas=useMemo(()=>{const m=new Map<number,{nombre:string;debe:number}>();cuentas.forEach(x=>{const id=x.cliente_id;const nombre=x.cliente?.nombre||"Cliente";const z=m.get(id)||{nombre,debe:0};z.debe+=x.tipo==="CARGO"?Number(x.monto):-Number(x.monto);m.set(id,z)});return [...m.entries()].map(([id,v])=>({id,...v})).filter(x=>x.debe>0.009).sort((a,b)=>b.debe-a.debe)},[cuentas]);
+ const guardarMov=async()=>{const monto=Number(form.monto);if(!monto||!form.concepto.trim()){setError("Completá monto y concepto.");return}const {error:e}=await supabase.from("movimientos_caja").insert({taller_id:TALLER_ID,tipo:form.tipo,medio:form.medio,monto,concepto:form.concepto.trim(),cliente_id:form.clienteId?Number(form.clienteId):null});if(e){setError(e.message);return}setModal(null);setForm({tipo:"INGRESO",medio:"EFECTIVO",monto:"",concepto:"",clienteId:""});cargar()};
+ const guardarCuenta=async()=>{const monto=Number(form.monto);if(!form.clienteId||!monto||!form.concepto.trim()){setError("Seleccioná cliente y completá monto y concepto.");return}const {error:e}=await supabase.from("cuentas_corrientes").insert({taller_id:TALLER_ID,cliente_id:Number(form.clienteId),tipo:form.tipo==="INGRESO"?"PAGO":"CARGO",monto,concepto:form.concepto.trim(),medio:form.tipo==="INGRESO"?form.medio:null});if(e){setError(e.message);return}if(form.tipo==="INGRESO"){const ce=await supabase.from("movimientos_caja").insert({taller_id:TALLER_ID,tipo:"INGRESO",medio:form.medio,monto,concepto:"Pago cuenta corriente: "+form.concepto.trim(),cliente_id:Number(form.clienteId)});if(ce.error){setError(ce.error.message);return}}setModal(null);setForm({tipo:"INGRESO",medio:"EFECTIVO",monto:"",concepto:"",clienteId:""});cargar()};
+ if(loading)return <main className="min-h-screen bg-[#f5f8f6] p-8 text-sm font-semibold text-gray-500">Cargando control financiero...</main>;
+ return <main className="min-h-screen bg-[#f5f8f6] p-4 text-[#17201b] md:p-8"><div className="mx-auto max-w-7xl">
+  <header className="mb-6 rounded-3xl bg-[#123c2b] p-6 text-white shadow-xl"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.18em] text-emerald-200">Control financiero</p><h1 className="mt-1 text-3xl font-black">Caja y facturación</h1><p className="mt-1 text-sm text-emerald-50/70">Efectivo, banco, movimientos y cuenta corriente en un solo lugar.</p></div><div className="flex gap-2"><button onClick={()=>router.push("/")} className="rounded-xl bg-white/10 px-4 py-2.5 font-bold"><ArrowLeft size={16} className="mr-2 inline"/>Volver</button><button onClick={cargar} className="rounded-xl bg-white px-4 py-2.5 font-bold text-[#123c2b]"><RefreshCw size={16} className="mr-2 inline"/>Actualizar</button></div></div></header>
+  {error&&<div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+   {[[Wallet,"Efectivo en caja",caja.ef],[Landmark,"Dinero en banco",caja.banco],[CreditCard,"Mercado Pago",caja.mp],[TrendingUp,"Disponible total",disponible]].map(([Icon,label,value]:any)=><div key={label} className="rounded-2xl border bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><span className="text-sm font-bold text-gray-500">{label}</span><span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><Icon size={19}/></span></div><p className="mt-4 text-3xl font-black">{money(value)}</p></div>)}
   </div>
- </main>;
+  <div className="mt-5 flex flex-wrap gap-3"><button onClick={()=>{setForm({...form,tipo:"INGRESO"});setModal("mov")}} className="rounded-xl bg-[#18a66b] px-5 py-3 font-black text-white"><Plus size={17} className="mr-2 inline"/>Registrar ingreso</button><button onClick={()=>{setForm({...form,tipo:"EGRESO"});setModal("mov")}} className="rounded-xl border bg-white px-5 py-3 font-black text-gray-700"><TrendingDown size={17} className="mr-2 inline"/>Registrar egreso</button><button onClick={()=>{setForm({...form,tipo:"EGRESO"});setModal("cuenta")}} className="rounded-xl border bg-white px-5 py-3 font-black text-gray-700"><Users size={17} className="mr-2 inline"/>Cargar deuda</button><button onClick={()=>{setForm({...form,tipo:"INGRESO"});setModal("cuenta")}} className="rounded-xl border bg-white px-5 py-3 font-black text-gray-700"><Wallet size={17} className="mr-2 inline"/>Registrar pago</button></div>
+  <div className="mt-6 grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
+   <section className="rounded-2xl border bg-white shadow-sm"><div className="border-b p-5"><h2 className="font-black">Cuenta corriente — quién debe</h2><p className="mt-1 text-xs text-gray-500">Saldo pendiente por cliente.</p></div><div className="divide-y">{deudas.length?deudas.slice(0,15).map(d=><div key={d.id} className="flex items-center justify-between p-5"><div><p className="font-bold">{d.nombre}</p><p className="text-xs text-gray-400">Saldo pendiente</p></div><b className="text-lg text-red-600">{money(d.debe)}</b></div>):<p className="py-12 text-center text-sm text-gray-400">No hay saldos pendientes.</p>}</div></section>
+   <section className="rounded-2xl border bg-white shadow-sm"><div className="border-b p-5"><h2 className="font-black">Últimos movimientos</h2></div><div className="divide-y">{mov.slice(0,12).map(x=><div key={x.id} className="flex items-center justify-between p-4"><div><p className="text-sm font-bold">{x.concepto}</p><p className="text-xs text-gray-400">{x.medio} · {new Date(x.created_at).toLocaleDateString("es-AR")}</p></div><b className={x.tipo==="INGRESO"?"text-green-600":"text-red-600"}>{x.tipo==="INGRESO"?"+":"-"}{money(x.monto)}</b></div>)}{!mov.length&&<p className="py-12 text-center text-sm text-gray-400">Todavía no hay movimientos.</p>}</div></section>
+  </div>
+  <section className="mt-5 rounded-2xl border bg-white shadow-sm"><div className="border-b p-5"><h2 className="font-black">Resumen de ventas y reparaciones</h2><p className="mt-1 text-xs text-gray-500">Actividad registrada en el sistema. Los saldos de caja se toman de movimientos de caja.</p></div><div className="grid gap-4 p-5 md:grid-cols-3"><div><p className="text-xs font-bold text-gray-400">Ventas completadas</p><p className="text-2xl font-black">{ventas.length}</p></div><div><p className="text-xs font-bold text-gray-400">Reparaciones</p><p className="text-2xl font-black">{ordenes.filter(o=>o.estado==="ENTREGADO").length}</p></div><div><p className="text-xs font-bold text-gray-400">Clientes con deuda</p><p className="text-2xl font-black">{deudas.length}</p></div></div></section>
+  {modal&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-xl font-black">{modal==="mov"?(form.tipo==="INGRESO"?"Registrar ingreso":"Registrar egreso"):(form.tipo==="INGRESO"?"Registrar pago":"Cargar deuda")}</h2><button onClick={()=>setModal(null)} className="rounded-xl p-2 hover:bg-gray-100"><X size={20}/></button></div><div className="mt-5 grid gap-4">
+   {modal==="cuenta"&&<select value={form.clienteId} onChange={e=>setForm({...form,clienteId:e.target.value})} className="h-12 rounded-xl border px-4"><option value="">Seleccionar cliente *</option>{clientes.map(c=><option key={c.id} value={c.id}>{c.nombre}{c.telefono?" — "+c.telefono:""}</option>)}</select>}
+   <select value={form.medio} onChange={e=>setForm({...form,medio:e.target.value})} className="h-12 rounded-xl border px-4"><option>EFECTIVO</option><option>BANCO</option><option>MERCADO_PAGO</option><option>OTRO</option></select>
+   <input type="number" min="0.01" step="0.01" value={form.monto} onChange={e=>setForm({...form,monto:e.target.value})} placeholder="Monto USD *" className="h-12 rounded-xl border px-4"/>
+   <input value={form.concepto} onChange={e=>setForm({...form,concepto:e.target.value})} placeholder="Concepto *" className="h-12 rounded-xl border px-4"/>
+  </div><div className="mt-6 flex justify-end gap-2"><button onClick={()=>setModal(null)} className="rounded-xl px-4 py-3 font-bold text-gray-500">Cancelar</button><button onClick={modal==="mov"?guardarMov:guardarCuenta} className="rounded-xl bg-[#18a66b] px-5 py-3 font-black text-white">Guardar</button></div></div></div>}
+ </div></main>;
 }
