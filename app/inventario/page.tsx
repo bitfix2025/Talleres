@@ -41,6 +41,7 @@ const CATEGORIAS = [
   "Componentes",
   "Accesorios",
   "Herramientas",
+  "Equipos",
   "Otros",
 ] as const;
 
@@ -59,6 +60,12 @@ type Producto = {
   stock_actual: number;
   stock_minimo: number;
   activo: boolean;
+  garantia_dias: number | null;
+  imei: string | null;
+  numero_serie: string | null;
+  salud_bateria: number | null;
+  condicion_equipo: string | null;
+  estado_fisico: string | null;
   created_at: string;
 };
 
@@ -72,7 +79,7 @@ const moneda = (valor: number) =>
   }).format(valor);
 
 const selectProducto =
-  "id,nombre,categoria,marca,modelo,sku,codigo_barras,descripcion,image_url,costo,precio,stock_actual,stock_minimo,activo,created_at";
+  "id,nombre,categoria,marca,modelo,sku,codigo_barras,descripcion,image_url,costo,precio,stock_actual,stock_minimo,activo,imei,numero_serie,salud_bateria,condicion_equipo,estado_fisico,garantia_dias,created_at";
 
 export default function InventarioPage() {
   const router = useRouter();
@@ -133,6 +140,12 @@ export default function InventarioPage() {
     stock: "0",
     stockMinimo: "0",
     descripcion: "",
+    imei: "",
+    numeroSerie: "",
+    saludBateria: "",
+    condicionEquipo: "USADO",
+    estadoFisico: "A",
+    garantiaDias: "60",
   });
 
   const [editado, setEditado] = useState({
@@ -512,6 +525,12 @@ export default function InventarioPage() {
           stock_actual: stock,
           stock_minimo: stockMinimo,
           activo: true,
+          imei: nuevo.imei.trim() || null,
+          numero_serie: nuevo.numeroSerie.trim() || null,
+          salud_bateria: nuevo.saludBateria ? Number(nuevo.saludBateria) : null,
+          condicion_equipo: nuevo.condicionEquipo || null,
+          estado_fisico: nuevo.estadoFisico || null,
+          garantia_dias: Number(nuevo.garantiaDias) || 0,
         })
         .select(selectProducto)
         .single();
@@ -2681,6 +2700,27 @@ export default function InventarioPage() {
                   Se calcula con el costo + margen
                 </p>
               </div>
+
+              {nuevo.categoria === "Equipos" && (
+                <>
+                  <Field label="IMEI" value={nuevo.imei} onChange={(value) => setNuevo({ ...nuevo, imei: value })} placeholder="IMEI del equipo" />
+                  <Field label="Número de serie" value={nuevo.numeroSerie} onChange={(value) => setNuevo({ ...nuevo, numeroSerie: value })} placeholder="Serie" />
+                  <Field label="Salud de batería (%)" type="number" min="0" max="100" value={nuevo.saludBateria} onChange={(value) => setNuevo({ ...nuevo, saludBateria: value })} placeholder="97" />
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-gray-600">Condición</label>
+                    <select value={nuevo.condicionEquipo} onChange={(e) => setNuevo({ ...nuevo, condicionEquipo: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
+                      <option value="USADO">Usado</option><option value="NUEVO">Nuevo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-gray-600">Estado físico</label>
+                    <select value={nuevo.estadoFisico} onChange={(e) => setNuevo({ ...nuevo, estadoFisico: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
+                      <option value="A">A</option><option value="B">B</option><option value="OUTLET">Outlet</option>
+                    </select>
+                  </div>
+                  <Field label="Garantía (días)" type="number" min="0" value={nuevo.garantiaDias} onChange={(value) => setNuevo({ ...nuevo, garantiaDias: value })} placeholder="60" />
+                </>
+              )}
 
               <Field
                 label="Stock inicial"
