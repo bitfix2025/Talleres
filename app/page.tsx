@@ -209,6 +209,13 @@ export default function Home() {
               />
 
               <SidebarItem
+                icon={<Smartphone size={18} />}
+                label="Ventas de equipos"
+                onClick={() => irA("/ventas/equipos")}
+                visible={String(rol).toUpperCase()==="ADMIN"}
+              />
+
+              <SidebarItem
                 icon={<FileText size={18} />}
                 label="Presupuestos"
                 onClick={() => irA("/presupuestos")}
