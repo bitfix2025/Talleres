@@ -2097,20 +2097,26 @@ export default function InventarioPage() {
           </Modal>
         )}
 
-              {/* DESCRIPCIÓN */}
+      {mostrarEditar && productoSeleccionado && (
+        <Modal title="Editar producto" onClose={cerrarEditar}>
+          <form onSubmit={guardarEdicion} className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nombre *" value={editado.nombre} onChange={(v) => setEditado({ ...editado, nombre: v })} placeholder="Nombre" />
+              <Field label="Categoría" value={editado.categoria} onChange={(v) => setEditado({ ...editado, categoria: v })} placeholder="Categoría" />
+              <Field label="Marca" value={editado.marca} onChange={(v) => setEditado({ ...editado, marca: v })} placeholder="Marca" />
+              <Field label="Modelo" value={editado.modelo} onChange={(v) => setEditado({ ...editado, modelo: v })} placeholder="Modelo" />
+              <Field label="SKU" value={editado.sku} onChange={(v) => setEditado({ ...editado, sku: v })} placeholder="SKU" />
+              <Field label="Código de barras" value={editado.codigoBarras} onChange={(v) => setEditado({ ...editado, codigoBarras: v })} placeholder="Código" />
+              <Field label="Costo (USD)" type="number" min="0" step="0.01" value={editado.costo} onChange={(v) => setEditado({ ...editado, costo: v })} placeholder="0.00" />
+              <Field label="Precio de venta (USD)" type="number" min="0" step="0.01" value={editado.precio} onChange={(v) => setEditado({ ...editado, precio: v })} placeholder="0.00" />
+              <Field label="Stock mínimo" type="number" min="0" step="1" value={editado.stockMinimo} onChange={(v) => setEditado({ ...editado, stockMinimo: v })} placeholder="0" />
               <div className="sm:col-span-2">
-                <Field
-                  label="Descripción"
-                  value={editado.descripcion}
-                  onChange={(value) => setEditado({ ...editado, descripcion: value })}
-                  placeholder="Información adicional"
-                />
+                <Field label="Descripción" value={editado.descripcion} onChange={(v) => setEditado({ ...editado, descripcion: v })} placeholder="Información adicional" />
               </div>
             </div>
-
             <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
               <button type="button" onClick={cerrarEditar} className="rounded-xl px-4 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100">Cancelar</button>
-              <button type="submit" className="rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white">Guardar cambios</button>
+              <button type="submit" disabled={guardandoProducto} className="rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">Guardar cambios</button>
             </div>
           </form>
         </Modal>
