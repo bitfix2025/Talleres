@@ -2097,6 +2097,25 @@ export default function InventarioPage() {
           </Modal>
         )}
 
+              {/* DESCRIPCIÓN */}
+              <div className="sm:col-span-2">
+                <Field
+                  label="Descripción"
+                  value={editado.descripcion}
+                  onChange={(value) => setEditado({ ...editado, descripcion: value })}
+                  placeholder="Información adicional"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+              <button type="button" onClick={cerrarEditar} className="rounded-xl px-4 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100">Cancelar</button>
+              <button type="submit" className="rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white">Guardar cambios</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {/* MODAL NUEVO PRODUCTO */}
       {mostrarNuevo && (
         <Modal title="Agregar producto" onClose={cerrarNuevo}>
@@ -2108,383 +2127,91 @@ export default function InventarioPage() {
                   {CATEGORIAS.map((categoria) => <option key={categoria} value={categoria}>{categoria}</option>)}
                 </select>
               </div>
+
               {nuevo.categoria === "Equipos" ? (
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-gray-600">Modelo</label>
                   <select value={nuevo.modelo} onChange={(e) => setNuevo({ ...nuevo, modelo: e.target.value, nombre: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
                     <option value="">Seleccionar modelo de iPhone</option>
-                        <option value="iPhone 11">iPhone 11</option>
-                        <option value="iPhone 11 Pro">iPhone 11 Pro</option>
-                        <option value="iPhone 11 Pro Max">iPhone 11 Pro Max</option>
-                        <option value="iPhone 12">iPhone 12</option>
-                        <option value="iPhone 12 mini">iPhone 12 mini</option>
-                        <option value="iPhone 12 Pro">iPhone 12 Pro</option>
-                        <option value="iPhone 12 Pro Max">iPhone 12 Pro Max</option>
-                        <option value="iPhone 13">iPhone 13</option>
-                        <option value="iPhone 13 mini">iPhone 13 mini</option>
-                        <option value="iPhone 13 Pro">iPhone 13 Pro</option>
-                        <option value="iPhone 13 Pro Max">iPhone 13 Pro Max</option>
-                        <option value="iPhone 14">iPhone 14</option>
-                        <option value="iPhone 14 Plus">iPhone 14 Plus</option>
-                        <option value="iPhone 14 Pro">iPhone 14 Pro</option>
-                        <option value="iPhone 14 Pro Max">iPhone 14 Pro Max</option>
-                        <option value="iPhone 15">iPhone 15</option>
-                        <option value="iPhone 15 Plus">iPhone 15 Plus</option>
-                        <option value="iPhone 15 Pro">iPhone 15 Pro</option>
-                        <option value="iPhone 15 Pro Max">iPhone 15 Pro Max</option>
-                        <option value="iPhone 16">iPhone 16</option>
-                        <option value="iPhone 16 Plus">iPhone 16 Plus</option>
-                        <option value="iPhone 16e">iPhone 16e</option>
-                        <option value="iPhone 16 Pro">iPhone 16 Pro</option>
-                        <option value="iPhone 16 Pro Max">iPhone 16 Pro Max</option>
-                        <option value="iPhone 17">iPhone 17</option>
-                        <option value="iPhone 17 Air">iPhone 17 Air</option>
-                        <option value="iPhone 17 Pro">iPhone 17 Pro</option>
-                        <option value="iPhone 17 Pro Max">iPhone 17 Pro Max</option>
-                        <option value="iPhone 17e">iPhone 17e</option>
+                    <option value="iPhone 11">iPhone 11</option>
+                    <option value="iPhone 11 Pro">iPhone 11 Pro</option>
+                    <option value="iPhone 11 Pro Max">iPhone 11 Pro Max</option>
+                    <option value="iPhone 12">iPhone 12</option>
+                    <option value="iPhone 12 mini">iPhone 12 mini</option>
+                    <option value="iPhone 12 Pro">iPhone 12 Pro</option>
+                    <option value="iPhone 12 Pro Max">iPhone 12 Pro Max</option>
+                    <option value="iPhone 13">iPhone 13</option>
+                    <option value="iPhone 13 mini">iPhone 13 mini</option>
+                    <option value="iPhone 13 Pro">iPhone 13 Pro</option>
+                    <option value="iPhone 13 Pro Max">iPhone 13 Pro Max</option>
+                    <option value="iPhone 14">iPhone 14</option>
+                    <option value="iPhone 14 Plus">iPhone 14 Plus</option>
+                    <option value="iPhone 14 Pro">iPhone 14 Pro</option>
+                    <option value="iPhone 14 Pro Max">iPhone 14 Pro Max</option>
+                    <option value="iPhone 15">iPhone 15</option>
+                    <option value="iPhone 15 Plus">iPhone 15 Plus</option>
+                    <option value="iPhone 15 Pro">iPhone 15 Pro</option>
+                    <option value="iPhone 15 Pro Max">iPhone 15 Pro Max</option>
+                    <option value="iPhone 16">iPhone 16</option>
+                    <option value="iPhone 16 Plus">iPhone 16 Plus</option>
+                    <option value="iPhone 16e">iPhone 16e</option>
+                    <option value="iPhone 16 Pro">iPhone 16 Pro</option>
+                    <option value="iPhone 16 Pro Max">iPhone 16 Pro Max</option>
+                    <option value="iPhone 17">iPhone 17</option>
+                    <option value="iPhone 17 Air">iPhone 17 Air</option>
+                    <option value="iPhone 17 Pro">iPhone 17 Pro</option>
+                    <option value="iPhone 17 Pro Max">iPhone 17 Pro Max</option>
+                    <option value="iPhone 17e">iPhone 17e</option>
                   </select>
                 </div>
               ) : (
                 <Field label="Nombre *" value={nuevo.nombre} onChange={(v) => setNuevo({ ...nuevo, nombre: v })} placeholder="Nombre del producto" />
               )}
-              {nuevo.categoria === "Equipos" ? (
+
+              {nuevo.categoria === "Equipos" && (
                 <>
                   <Field label="Capacidad" value={nuevo.descripcion} onChange={(v) => setNuevo({ ...nuevo, descripcion: v })} placeholder="Ej. 256 GB" />
                   <Field label="IMEI" value={nuevo.imei} onChange={(v) => setNuevo({ ...nuevo, imei: v })} placeholder="IMEI del equipo" />
                   <Field label="Número de serie" value={nuevo.numeroSerie} onChange={(v) => setNuevo({ ...nuevo, numeroSerie: v })} placeholder="Número de serie" />
                   <Field label="Salud de batería (%)" type="number" min="0" max="100" value={nuevo.saludBateria} onChange={(v) => setNuevo({ ...nuevo, saludBateria: v })} placeholder="97" />
-                  <div><label className="mb-1.5 block text-xs font-bold text-gray-600">Condición</label><select value={nuevo.condicionEquipo} onChange={(e) => setNuevo({ ...nuevo, condicionEquipo: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm"><option value="USADO">Usado</option><option value="NUEVO">Nuevo</option></select></div>
-                  <div><label className="mb-1.5 block text-xs font-bold text-gray-600">Estado físico</label><select value={nuevo.estadoFisico} onChange={(e) => setNuevo({ ...nuevo, estadoFisico: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm"><option value="A">A</option><option value="B">B</option><option value="OUTLET">Outlet</option></select></div>
-                </>
-              ) : (
-                <>
-                  <Field label="Marca" value={nuevo.marca} onChange={(v) => setNuevo({ ...nuevo, marca: v })} placeholder="Marca" />
-                  <Field label="Modelo" value={nuevo.modelo} onChange={(v) => setNuevo({ ...nuevo, modelo: v })} placeholder="Modelo" />
-                  <Field label="SKU" value={nuevo.sku} onChange={(v) => setNuevo({ ...nuevo, sku: v })} placeholder="SKU" />
-                  <Field label="Código de barras" value={nuevo.codigoBarras} onChange={(v) => setNuevo({ ...nuevo, codigoBarras: v })} placeholder="Código" />
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-gray-600">Condición</label>
+                    <select value={nuevo.condicionEquipo} onChange={(e) => setNuevo({ ...nuevo, condicionEquipo: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
+                      <option value="USADO">Usado</option><option value="NUEVO">Nuevo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-gray-600">Estado físico</label>
+                    <select value={nuevo.estadoFisico} onChange={(e) => setNuevo({ ...nuevo, estadoFisico: e.target.value })} className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm">
+                      <option value="A">A</option><option value="B">B</option><option value="OUTLET">Outlet</option>
+                    </select>
+                  </div>
                 </>
               )}
+
               <Field label="Costo (USD)" type="number" min="0" step="0.01" value={nuevo.costo} onChange={(v) => setNuevo({ ...nuevo, costo: v })} placeholder="0.00" />
               <Field label="Precio de venta (USD)" type="number" min="0" step="0.01" value={nuevo.precio} onChange={(v) => setNuevo({ ...nuevo, precio: v })} placeholder="0.00" />
               {nuevo.categoria === "Equipos" && <Field label="Garantía (días)" type="number" min="0" value={nuevo.garantiaDias} onChange={(v) => setNuevo({ ...nuevo, garantiaDias: v })} placeholder="60" />}
               <Field label="Stock inicial" type="number" min="0" step="1" value={nuevo.stock} onChange={(v) => setNuevo({ ...nuevo, stock: v })} placeholder="1" />
               <Field label="Stock mínimo" type="number" min="0" step="1" value={nuevo.stockMinimo} onChange={(v) => setNuevo({ ...nuevo, stockMinimo: v })} placeholder="0" />
             </div>
-            {nuevo.categoria === "Equipos" && <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">El código de barras se genera automáticamente al guardar el equipo y se podrá imprimir en su etiqueta.</div>}
+
+            {nuevo.categoria === "Equipos" && (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+                El código de barras se genera automáticamente al guardar el equipo y se podrá imprimir en su etiqueta.
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
               <button type="button" onClick={cerrarNuevo} className="rounded-xl px-4 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100">Cancelar</button>
-              <button disabled={guardandoProducto} type="submit" className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">{guardandoProducto && <Loader2 size={16} className="animate-spin" />}Guardar producto</button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* =====================================================
-          MODAL EDITAR
-      ===================================================== */}
-
-      {mostrarEditar &&
-        productoSeleccionado && (
-          <Modal
-            title="Editar producto"
-            onClose={
-              cerrarEditar
-            }
-          >
-
-            <form
-              onSubmit={
-                guardarEdicion
-              }
-              className="space-y-4"
-            >
-
-              {/* FOTO DEL PRODUCTO */}
-
-              <div className="rounded-2xl border border-gray-200 bg-[#f8faf9] p-4">
-
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-
-                  <label className="group relative flex h-28 w-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-gray-200">
-
-                    {vistaPreviaEdicion ? (
-                      <img
-                        src={
-                          vistaPreviaEdicion
-                        }
-                        alt={
-                          productoSeleccionado.nombre
-                        }
-                        className="h-full w-full object-cover transition group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center gap-1 text-gray-300">
-                        <ImagePlus
-                          size={28}
-                        />
-                        <span className="text-[9px] font-bold">
-                          Sin foto
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100">
-
-                      <div className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-black text-gray-700">
-                        <ImagePlus size={13} />
-                        Cambiar
-                      </div>
-
-                    </div>
-
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={
-                        seleccionarFotoEdicion
-                      }
-                      className="sr-only"
-                    />
-
-                  </label>
-
-                  <div className="min-w-0">
-
-                    <p className="text-xs font-black uppercase tracking-wider text-[#18a66b]">
-                      Foto del producto
-                    </p>
-
-                    <p className="mt-1 text-sm font-black text-gray-800">
-                      {fotoEdicion
-                        ? "Nueva foto seleccionada"
-                        : productoSeleccionado.image_url
-                        ? "Foto actual"
-                        : "Este producto no tiene foto"}
-                    </p>
-
-                    <p className="mt-1 text-xs leading-5 text-gray-400">
-                      Hacé clic en la imagen para
-                      agregar o cambiar la foto.
-                      JPG, PNG o WEBP.
-                    </p>
-
-                    {fotoEdicion && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFotoEdicion(null);
-                          setVistaPreviaEdicion(
-                            productoSeleccionado.image_url ??
-                              ""
-                          );
-                        }}
-                        className="mt-2 text-xs font-bold text-red-500 hover:text-red-600"
-                      >
-                        Cancelar nueva foto
-                      </button>
-                    )}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-
-                <Field
-                  label="Nombre *"
-                  value={
-                    editado.nombre
-                  }
-                  onChange={(value) =>
-                    setEditado({
-                      ...editado,
-                      nombre: value,
-                    })
-                  }
-                />
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-gray-600">
-                    Categoría
-                  </label>
-
-                  <select
-                    value={
-                      editado.categoria
-                    }
-                    onChange={(event) =>
-                      setEditado({
-                        ...editado,
-                        categoria:
-                          event.target.value,
-                      })
-                    }
-                    className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
-                  >
-                    <option value="">
-                      Sin categoría
-                    </option>
-
-                    {CATEGORIAS.map(
-                      (categoria) => (
-                        <option
-                          key={
-                            categoria
-                          }
-                          value={
-                            categoria
-                          }
-                        >
-                          {categoria}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-                <Field
-                  label="Marca"
-                  value={
-                    editado.marca
-                  }
-                  onChange={(value) =>
-                    setEditado({
-                      ...editado,
-                      marca: value,
-                    })
-                  }
-                />
-
-                <Field
-                  label="Modelo"
-                  value={
-                    editado.modelo
-                  }
-                  onChange={(value) =>
-                    setEditado({
-                      ...editado,
-                      modelo: value,
-                    })
-                  }
-                />
-
-                <Field
-                  label="SKU"
-                  value={
-                    editado.sku
-                  }
-                  onChange={(value) =>
-                    setEditado({
-                      ...editado,
-                      sku: value,
-                    })
-                  }
-                />
-
-                <Field
-                  label="Código de barras"
-                  value={
-                    editado.codigoBarras
-                  }
-                  onChange={(value) =>
-                    setEditado({
-                      ...editado,
-                      codigoBarras:
-                        value,
-                    })
-                  }
-                  placeholder="Ej. 7501234567890"
-                />
-
-                <Field
-                  label="Costo (USD)"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={
-                    editado.costo
-                  }
-                  onChange={(value) =>
-                    setEditado({
-                      ...editado,
-                      costo: value,
-                    })
-                  }
-                />
-
-                <Field label="Precio de venta (USD)" type="number" min="0" step="0.01" value={editado.precio} onChange={(value) => setEditado({ ...editado, precio: value })} placeholder="0.00" />
-
-                <Field label="Stock mínimo" type="number" min="0" step="1" value={editado.stockMinimo} onChange={(value) => setEditado({ ...editado, stockMinimo: value })} placeholder="0" />
-              {/* DESCRIPCIÓN */}
-
-            <div>
-
-              <label className="mb-1.5 block text-xs font-bold text-gray-600">
-                Descripción
-              </label>
-
-              <textarea
-                value={
-                  nuevo.descripcion
-                }
-                onChange={(event) =>
-                  setNuevo({
-                    ...nuevo,
-                    descripcion:
-                      event.target.value,
-                  })
-                }
-                rows={3}
-                placeholder="Información adicional del repuesto..."
-                className="w-full resize-none rounded-xl border border-gray-200 bg-[#f8faf9] px-3 py-2.5 text-sm outline-none focus:border-[#18a66b] focus:bg-white focus:ring-2 focus:ring-[#18a66b]/10"
-              />
-
-            </div>
-
-            {/* BOTONES */}
-
-            <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
-
-              <button
-                type="button"
-                onClick={
-                  cerrarNuevo
-                }
-                className="rounded-xl px-4 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100"
-              >
-                Cancelar
-              </button>
-
-              <button
-                disabled={
-                  guardandoProducto
-                }
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-              >
-
-                {guardandoProducto && (
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
-                )}
-
+              <button disabled={guardandoProducto} type="submit" className="inline-flex items-center gap-2 rounded-xl bg-[#18a66b] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                {guardandoProducto && <Loader2 size={16} className="animate-spin" />}
                 Guardar producto
-
               </button>
-
             </div>
-
           </form>
-
         </Modal>
       )}
-
     </main>
   );
 }
