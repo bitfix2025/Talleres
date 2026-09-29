@@ -525,6 +525,7 @@ export default function InventarioPage() {
           stock_actual: stock,
           stock_minimo: stockMinimo,
           activo: true,
+          codigo_barras: nuevo.categoria === "Equipos" ? null : (nuevo.codigoBarras.trim() || null),
           imei: nuevo.imei.trim() || null,
           numero_serie: nuevo.numeroSerie.trim() || null,
           salud_bateria: nuevo.saludBateria ? Number(nuevo.saludBateria) : null,
@@ -541,6 +542,15 @@ export default function InventarioPage() {
       );
       setGuardandoProducto(false);
       return;
+    }
+
+    if (nuevo.categoria === "Equipos" && data?.id) {
+      const codigoEquipo = `BF-${String(data.id).padStart(6, "0")}`;
+      await supabase
+        .from("productos")
+        .update({ codigo_barras: codigoEquipo })
+        .eq("id", data.id)
+        .eq("taller_id", TALLER_ID);
     }
 
     if (stock > 0) {
@@ -2587,62 +2597,59 @@ export default function InventarioPage() {
 
               </div>
 
-              <Field
-                label="Marca"
-                value={
-                  nuevo.marca
-                }
-                onChange={(value) =>
-                  setNuevo({
-                    ...nuevo,
-                    marca: value,
-                  })
-                }
-                placeholder="Ej. JK"
-              />
-
-              <Field
-                label="Modelo"
-                value={
-                  nuevo.modelo
-                }
-                onChange={(value) =>
-                  setNuevo({
-                    ...nuevo,
-                    modelo: value,
-                  })
-                }
-                placeholder="iPhone 13"
-              />
-
-              <Field
-                label="SKU"
-                value={
-                  nuevo.sku
-                }
-                onChange={(value) =>
-                  setNuevo({
-                    ...nuevo,
-                    sku: value,
-                  })
-                }
-                placeholder="IP13-OLED-01"
-              />
-
-              <Field
-                label="Código de barras"
-                value={
-                  nuevo.codigoBarras
-                }
-                onChange={(value) =>
-                  setNuevo({
-                    ...nuevo,
-                    codigoBarras:
-                      value,
-                  })
-                }
-                placeholder="Ej. 7501234567890"
-              />
+              {nuevo.categoria === "Equipos" ? (
+                <>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-gray-600">Modelo</label>
+                    <select
+                      value={nuevo.modelo}
+                      onChange={(event) => setNuevo({ ...nuevo, modelo: event.target.value, nombre: event.target.value })}
+                      className="h-11 w-full rounded-xl border border-gray-200 bg-[#f8faf9] px-3 text-sm outline-none focus:border-[#18a66b] focus:bg-white"
+                    >
+                      <option value="">Seleccionar modelo de iPhone</option>
+                      <option key="iPhone 11" value="iPhone 11">iPhone 11</option>
+                      <option key="iPhone 11 Pro" value="iPhone 11 Pro">iPhone 11 Pro</option>
+                      <option key="iPhone 11 Pro Max" value="iPhone 11 Pro Max">iPhone 11 Pro Max</option>
+                      <option key="iPhone 12" value="iPhone 12">iPhone 12</option>
+                      <option key="iPhone 12 mini" value="iPhone 12 mini">iPhone 12 mini</option>
+                      <option key="iPhone 12 Pro" value="iPhone 12 Pro">iPhone 12 Pro</option>
+                      <option key="iPhone 12 Pro Max" value="iPhone 12 Pro Max">iPhone 12 Pro Max</option>
+                      <option key="iPhone 13" value="iPhone 13">iPhone 13</option>
+                      <option key="iPhone 13 mini" value="iPhone 13 mini">iPhone 13 mini</option>
+                      <option key="iPhone 13 Pro" value="iPhone 13 Pro">iPhone 13 Pro</option>
+                      <option key="iPhone 13 Pro Max" value="iPhone 13 Pro Max">iPhone 13 Pro Max</option>
+                      <option key="iPhone 14" value="iPhone 14">iPhone 14</option>
+                      <option key="iPhone 14 Plus" value="iPhone 14 Plus">iPhone 14 Plus</option>
+                      <option key="iPhone 14 Pro" value="iPhone 14 Pro">iPhone 14 Pro</option>
+                      <option key="iPhone 14 Pro Max" value="iPhone 14 Pro Max">iPhone 14 Pro Max</option>
+                      <option key="iPhone 15" value="iPhone 15">iPhone 15</option>
+                      <option key="iPhone 15 Plus" value="iPhone 15 Plus">iPhone 15 Plus</option>
+                      <option key="iPhone 15 Pro" value="iPhone 15 Pro">iPhone 15 Pro</option>
+                      <option key="iPhone 15 Pro Max" value="iPhone 15 Pro Max">iPhone 15 Pro Max</option>
+                      <option key="iPhone 16" value="iPhone 16">iPhone 16</option>
+                      <option key="iPhone 16 Plus" value="iPhone 16 Plus">iPhone 16 Plus</option>
+                      <option key="iPhone 16e" value="iPhone 16e">iPhone 16e</option>
+                      <option key="iPhone 16 Pro" value="iPhone 16 Pro">iPhone 16 Pro</option>
+                      <option key="iPhone 16 Pro Max" value="iPhone 16 Pro Max">iPhone 16 Pro Max</option>
+                      <option key="iPhone 17" value="iPhone 17">iPhone 17</option>
+                      <option key="iPhone 17 Air" value="iPhone 17 Air">iPhone 17 Air</option>
+                      <option key="iPhone 17 Pro" value="iPhone 17 Pro">iPhone 17 Pro</option>
+                      <option key="iPhone 17 Pro Max" value="iPhone 17 Pro Max">iPhone 17 Pro Max</option>
+                      <option key="iPhone 17e" value="iPhone 17e">iPhone 17e</option>
+                    </select>
+                  </div>
+                  <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+                    El código de barras se genera automáticamente al guardar y queda listo para la etiqueta del equipo.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Field label="Marca" value={nuevo.marca} onChange={(value) => setNuevo({ ...nuevo, marca: value })} placeholder="Ej. Apple" />
+                  <Field label="Modelo" value={nuevo.modelo} onChange={(value) => setNuevo({ ...nuevo, modelo: value })} placeholder="Modelo" />
+                  <Field label="SKU" value={nuevo.sku} onChange={(value) => setNuevo({ ...nuevo, sku: value })} placeholder="SKU" />
+                  <Field label="Código de barras" value={nuevo.codigoBarras} onChange={(value) => setNuevo({ ...nuevo, codigoBarras: value })} placeholder="Código" />
+                </>
+              )}
 
               <Field
                 label="Costo (USD)"
