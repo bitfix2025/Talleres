@@ -2948,6 +2948,7 @@ function Field({
   placeholder,
   type = "text",
   min,
+  max,
   step,
 }: {
   label: string;
