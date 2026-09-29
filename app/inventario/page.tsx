@@ -2419,8 +2419,7 @@ export default function InventarioPage() {
                 <Field label="Precio de venta (USD)" type="number" min="0" step="0.01" value={editado.precio} onChange={(value) => setEditado({ ...editado, precio: value })} placeholder="0.00" />
 
                 <Field label="Stock mínimo" type="number" min="0" step="1" value={editado.stockMinimo} onChange={(value) => setEditado({ ...editado, stockMinimo: value })} placeholder="0" />
-
-/* DESCRIPCIÓN */}
+              {/* DESCRIPCIÓN */}
 
             <div>
 
