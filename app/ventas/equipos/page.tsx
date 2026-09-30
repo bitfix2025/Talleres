@@ -63,7 +63,10 @@ export default function VentasEquiposPage(){
    if(de)throw new Error(de.message);
    const equipos=carrito.map(p=>({taller_id:TALLER_ID,venta_id:venta.id,producto_id:p.id,cliente_id:clienteId?Number(clienteId):null,marca:p.marca||"Apple",modelo:p.modelo||p.nombre,capacidad:null,color:null,imei:p.imei,numero_serie:p.numero_serie,salud_bateria:p.salud_bateria,condicion:p.condicion_equipo||"USADO",estado_fisico:p.estado_fisico,garantia_dias:p.garantia_dias||0,costo_usd:p.costo,precio_usd:p.precio,ganancia_usd:Number(p.precio)-Number(p.costo),observaciones:observaciones.trim()||null}));
    const {error:ee}=await supabase.from("ventas_equipos").insert(equipos);
-   if(ee)throw new Error(ee.message);\n   const {error:cajaError}=await supabase.from("movimientos_caja").insert({taller_id:TALLER_ID,tipo:"INGRESO",medio:metodoPago==="TRANSFERENCIA"?"BANCO":metodoPago==="MERCADO PAGO"?"MERCADO_PAGO":metodoPago==="TARJETA"?"OTRO":"EFECTIVO",monto:total,concepto:"Venta de equipos #"+venta.id,cliente_id:clienteId?Number(clienteId):null,venta_id:venta.id});\n   if(cajaError)throw new Error("La venta se guardó, pero no se pudo registrar en caja: "+cajaError.message);
+   if(ee)throw new Error(ee.message);
+
+   const {error:cajaError}=await supabase.from("movimientos_caja").insert({taller_id:TALLER_ID,tipo:"INGRESO",medio:metodoPago==="TRANSFERENCIA"?"BANCO":metodoPago==="MERCADO PAGO"?"MERCADO_PAGO":metodoPago==="TARJETA"?"OTRO":"EFECTIVO",monto:total,concepto:"Venta de equipos #"+venta.id,cliente_id:clienteId?Number(clienteId):null,venta_id:venta.id});
+   if(cajaError)throw new Error("La venta se guardó, pero no se pudo registrar en caja: "+cajaError.message);
    for(const p of carrito){
     const {error:se}=await supabase.from("productos").update({stock_actual:p.stock_actual-1}).eq("id",p.id).eq("taller_id",TALLER_ID);
     if(se)throw new Error(se.message);
