@@ -123,7 +123,7 @@ export default function ReparacionDetallePage(){
       if(!Number.isFinite(costoProducto))throw new Error("El costo del repuesto no es válido.");
       if(existente){
         const r=await supabase.from("presupuesto_reparacion_items").update({cantidad:nueva,precio_unitario:precio,nombre_producto:nombreProducto}).eq("id",existente.id).select("id,orden_id,producto_id,nombre_producto,cantidad,precio_unitario,costo_unitario").single();
-        if(r.error)throw new Error(r.error.message);
+        if(r.error)throw new Error(r.error.message);\n      const {error:cajaError}=await supabase.from("movimientos_caja").insert({taller_id:orden.taller_id??1,tipo:"INGRESO",medio:metodoPago==="TRANSFERENCIA"?"BANCO":metodoPago==="MERCADO PAGO"?"MERCADO_PAGO":metodoPago==="TARJETA"?"OTRO":metodoPago==="OTRO"?"OTRO":"EFECTIVO",monto,concepto:"Pago reparación #"+orden.id,cliente_id:orden.cliente_id??null,orden_id:orden.id});\n      if(cajaError)throw new Error("El pago se guardó, pero no se pudo registrar en caja: "+cajaError.message);
       }else{
         const r=await supabase.from("presupuesto_reparacion_items").insert({orden_id:orden.id,producto_id:p.id,nombre_producto:nombreProducto,cantidad:q,costo_unitario:costoProducto,precio_unitario:precio}).select("id,orden_id,producto_id,nombre_producto,cantidad,precio_unitario,costo_unitario").single();
         if(r.error)throw new Error(r.error.message);
