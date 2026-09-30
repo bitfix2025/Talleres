@@ -853,6 +853,17 @@ export default function VentasPage() {
         }
       }
 
+      const { error: cajaError } = await supabase.from("movimientos_caja").insert({
+        taller_id: TALLER_ID,
+        tipo: "INGRESO",
+        medio: metodoPago === "TRANSFERENCIA" ? "BANCO" : metodoPago === "MERCADO PAGO" ? "MERCADO_PAGO" : metodoPago === "TARJETA" ? "OTRO" : "EFECTIVO",
+        monto: totalVenta,
+        concepto: "Venta #" + venta.id,
+        cliente_id: clienteSeleccionado,
+        venta_id: venta.id,
+      });
+      if (cajaError) throw new Error("La venta se guardó, pero no se pudo registrar en caja: " + cajaError.message);
+
       await cargarDatos();
 
       detenerScanner();
@@ -2244,4 +2255,4 @@ function Modal({
       </div>
     </div>
   );
-\n\n        const { error: cajaError } = await supabase.from("movimientos_caja").insert({\n          taller_id: TALLER_ID,\n          tipo: "INGRESO",\n          medio: metodoPago === "TRANSFERENCIA" ? "BANCO" : metodoPago === "MERCADO PAGO" ? "MERCADO_PAGO" : metodoPago === "TARJETA" ? "OTRO" : "EFECTIVO",\n          monto: totalVenta,\n          concepto: "Venta #" + venta.id,\n          cliente_id: clienteSeleccionado?.id ?? null,\n          venta_id: venta.id\n        });\n        if (cajaError) throw new Error("La venta se guardó, pero no se pudo registrar en caja: " + cajaError.message);}
+
