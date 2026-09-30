@@ -856,7 +856,7 @@ export default function VentasPage() {
       const { error: cajaError } = await supabase.from("movimientos_caja").insert({
         taller_id: TALLER_ID,
         tipo: "INGRESO",
-        medio: metodoPago === "TRANSFERENCIA" ? "BANCO" : metodoPago === "MERCADO PAGO" ? "MERCADO_PAGO" : metodoPago === "TARJETA" ? "OTRO" : "EFECTIVO",
+        medio: metodoPago === "TRANSFERENCIA" ? "BANCO" : metodoPago === "MERCADO_PAGO" ? "MERCADO_PAGO" : metodoPago === "USDT" ? "USDT" : "EFECTIVO",
         monto: totalVenta,
         concepto: "Venta #" + venta.id,
         cliente_id: clienteSeleccionado,
@@ -1079,7 +1079,7 @@ export default function VentasPage() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex flex-col gap-5 rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#e9f8f1] text-[#18a66b]">
@@ -1855,12 +1855,12 @@ export default function VentasPage() {
                             Transferencia
                           </option>
 
-                          <option value="TARJETA">
-                            Tarjeta
-                          </option>
-
                           <option value="MERCADO_PAGO">
                             Mercado Pago
+                          </option>
+
+                          <option value="USDT">
+                            USDT
                           </option>
                         </select>
                       </div>
