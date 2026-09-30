@@ -148,7 +148,7 @@ export default function ReparacionDetallePage(){
     try{
       const r=await supabase.from("pagos_reparacion").insert({taller_id:orden.taller_id??null,orden_id:orden.id,monto,monto_usd:monto,metodo_pago:metodoPago,concepto:"Pago de reparación",observaciones:notasPago.trim()||null,fecha_pago:new Date().toISOString()}).select("id,monto,monto_usd,metodo_pago,concepto,observaciones,fecha_pago,created_at").single();
       if(r.error)throw new Error(r.error.message);
-      const {error:cajaError}=await supabase.from("movimientos_caja").insert({taller_id:orden.taller_id??1,tipo:"INGRESO",medio:metodoPago==="TRANSFERENCIA"?"BANCO":metodoPago==="MERCADO PAGO"?"MERCADO_PAGO":metodoPago==="TARJETA"?"OTRO":metodoPago==="OTRO"?"OTRO":"EFECTIVO",monto,concepto:"Pago reparación #"+orden.id,cliente_id:orden.cliente_id??null,orden_id:orden.id});
+      const {error:cajaError}=await supabase.from("movimientos_caja").insert({taller_id:orden.taller_id??1,tipo:"INGRESO",medio:metodoPago==="TRANSFERENCIA"?"BANCO":metodoPago==="MERCADO PAGO"||metodoPago==="MERCADO_PAGO"?"MERCADO_PAGO":metodoPago==="USDT"?"USDT":"EFECTIVO",monto,concepto:"Pago reparación #"+orden.id,cliente_id:orden.cliente_id??null,orden_id:orden.id});
       if(cajaError)throw new Error("El pago se guardó, pero no se pudo registrar en caja: "+cajaError.message);
             setMontoPago("");setNotasPago("");setMensaje(`Pago registrado: ${dinero(monto)}.`);await cargar();
     }catch(e){setError(`No se pudo registrar el pago: ${e instanceof Error?e.message:String(e)}`);}finally{setGuardando(false);}
